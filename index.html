@@ -10,23 +10,25 @@
 <style>
   /* ============ TOKENS ============ */
   :root{
-    --ink:#0E1B2A;
-    --panel:#0A141F;
-    --panel-edge:#182636;
-    --amber:#F2A93B;
-    --amber-dim:#8a6a2e;
-    --slate:#C7D0DA;
-    --slate-dim:#7C8AA0;
-    --green:#4FAE84;
-    --rose:#E2665D;
-    --paper:#F7F4EC;
-    --paper-ink:#1B2430;
+    --page-bg:#F4F1EA;
+    --ink:#1F1E1D;
+    --panel:#FFFFFF;
+    --panel-edge:#E3DDD0;
+    --amber:#D97757;
+    --amber-tint:#F3DCCF;
+    --amber-dim:#8A4A30;
+    --slate:#4A453D;
+    --slate-dim:#8C8676;
+    --green:#3F7A5A;
+    --rose:#B14A40;
+    --paper:#FBF9F5;
+    --paper-ink:#2B2620;
     --radius:10px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:var(--ink);
+    background:var(--page-bg);
     color:var(--slate);
     font-family:'Inter',sans-serif;
     min-height:100vh;
@@ -37,7 +39,7 @@
   button{font-family:'Inter',sans-serif;cursor:pointer;border:none;border-radius:8px;}
   input,select,textarea{font-family:'Inter',sans-serif;border-radius:8px;border:1px solid var(--panel-edge);background:var(--panel);color:var(--slate);padding:10px 12px;}
   input:focus,select:focus,textarea:focus{outline:2px solid var(--amber);outline-offset:1px;}
-  ::selection{background:var(--amber);color:var(--ink);}
+  ::selection{background:var(--amber);color:#fff;}
 
   /* ============ LOGIN ============ */
   #login-screen{
@@ -52,15 +54,15 @@
     font-family:'Space Mono',monospace;letter-spacing:.08em;font-size:13px;color:var(--amber);
     text-transform:uppercase;margin-bottom:6px;
   }
-  .login-card h1{font-size:22px;margin:0 0 22px;color:#fff;font-weight:700;}
+  .login-card h1{font-size:22px;margin:0 0 22px;color:var(--ink);font-weight:700;}
   .field{margin-bottom:14px;}
   .field label{display:block;font-size:12px;color:var(--slate-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
   .field input{width:100%;}
   .btn-primary{
-    background:var(--amber);color:var(--ink);font-weight:700;padding:12px 16px;width:100%;
+    background:var(--amber);color:#fff;font-weight:700;padding:12px 16px;width:100%;
     font-size:14px;letter-spacing:.02em;
   }
-  .btn-primary:hover{background:#ffbb52;}
+  .btn-primary:hover{background:#C15F41;}
   .btn-ghost{
     background:transparent;border:1px solid var(--panel-edge);color:var(--slate);padding:10px 14px;font-size:13px;
   }
@@ -71,10 +73,10 @@
   #app{display:none;max-width:980px;margin:0 auto;padding:0 20px 60px;}
   header.top{padding:24px 0 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
   header.top .who{font-size:13px;color:var(--slate-dim);text-align:right;}
-  header.top .who strong{color:#fff;display:block;font-size:14px;}
+  header.top .who strong{color:var(--ink);display:block;font-size:14px;}
   .role-badge{
     display:inline-block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.05em;
-    padding:2px 7px;border-radius:4px;background:var(--amber-dim);color:var(--amber);margin-top:4px;text-transform:uppercase;
+    padding:2px 7px;border-radius:4px;background:var(--amber-tint);color:var(--amber-dim);margin-top:4px;text-transform:uppercase;
   }
 
   /* ============ DEPARTURES TICKER ============ */
@@ -92,7 +94,7 @@
     align-items:center;
   }
   .board-row:last-child{border-bottom:none;}
-  .board-row .name{color:#fff;}
+  .board-row .name{color:var(--ink);}
   .board-row .type{color:var(--slate-dim);font-size:11px;text-transform:uppercase;}
   .board-row .dates{color:var(--amber);white-space:nowrap;}
   .board-empty{padding:16px;color:var(--slate-dim);font-size:13px;font-style:italic;}
@@ -112,12 +114,12 @@
   .balance-card{
     background:var(--panel);border:1px solid var(--panel-edge);border-radius:12px;padding:16px;
   }
-  .balance-card .num{font-family:'Space Mono',monospace;font-size:28px;color:#fff;font-weight:700;}
+  .balance-card .num{font-family:'Space Mono',monospace;font-size:28px;color:var(--ink);font-weight:700;}
   .balance-card .label{font-size:11px;color:var(--slate-dim);text-transform:uppercase;letter-spacing:.05em;margin-top:4px;}
 
   /* ============ FORM ============ */
   .panel-box{background:var(--panel);border:1px solid var(--panel-edge);border-radius:12px;padding:20px;margin-bottom:28px;}
-  .panel-box h2{margin:0 0 16px;font-size:15px;color:#fff;font-weight:700;}
+  .panel-box h2{margin:0 0 16px;font-size:15px;color:var(--ink);font-weight:700;}
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   .form-grid .full{grid-column:1/-1;}
   .field-inline label{display:block;font-size:12px;color:var(--slate-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
@@ -139,9 +141,9 @@
     border-left:2px dotted rgba(0,0,0,.2);
   }
   .ticket .tname{font-weight:700;font-size:14px;}
-  .ticket .ttype{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin-top:2px;}
+  .ticket .ttype{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8A8072;margin-top:2px;}
   .ticket .tdates{font-family:'Space Mono',monospace;font-size:13px;margin-top:8px;}
-  .ticket .tnote{font-size:12px;color:#5b6472;margin-top:8px;}
+  .ticket .tnote{font-size:12px;color:#6B6255;margin-top:8px;}
   .status-pill{
     font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;
     padding:3px 9px;border-radius:20px;font-weight:700;
@@ -150,12 +152,12 @@
   .status-approved{background:#d7ede1;color:#276b4b;}
   .status-denied{background:#f6d9d6;color:#a5352c;}
   .stub-days{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;}
-  .stub-days-label{font-size:10px;color:#6b7280;text-transform:uppercase;}
-  .stub-total{font-family:'Space Mono',monospace;font-size:12px;color:#9aa1ac;margin-top:4px;}
+  .stub-days-label{font-size:10px;color:#8A8072;text-transform:uppercase;}
+  .stub-total{font-family:'Space Mono',monospace;font-size:12px;color:#A69C8C;margin-top:4px;}
   .ticket-actions{margin-top:10px;display:flex;gap:6px;}
-  .btn-approve{background:var(--green);color:#0a2a1c;font-size:12px;padding:7px 12px;font-weight:700;}
-  .btn-deny{background:var(--rose);color:#2b0e0b;font-size:12px;padding:7px 12px;font-weight:700;}
-  .btn-cancel{background:transparent;border:1px solid #b9bfc9;color:#5b6472;font-size:12px;padding:7px 12px;}
+  .btn-approve{background:var(--green);color:#fff;font-size:12px;padding:7px 12px;font-weight:700;}
+  .btn-deny{background:var(--rose);color:#fff;font-size:12px;padding:7px 12px;font-weight:700;}
+  .btn-cancel{background:transparent;border:1px solid #D6CFC2;color:#6B6255;font-size:12px;padding:7px 12px;}
   .empty-state{color:var(--slate-dim);font-size:13px;font-style:italic;padding:18px 0;}
 
   @media (max-width:560px){
@@ -219,6 +221,10 @@
 
     <div class="panel-box">
       <h2>Request time off</h2>
+      <div id="edit-banner" style="display:none;background:rgba(217,119,87,0.12);border:1px solid var(--amber-dim);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--amber-dim);margin-bottom:14px;">
+        Editing your request — saving will resend it for approval.
+        <button id="cancel-edit-btn" class="btn-ghost" style="padding:4px 10px;font-size:12px;margin-left:8px;">Cancel edit</button>
+      </div>
       <div class="form-grid">
         <div class="field-inline">
           <label for="req-type">Type</label>
@@ -302,6 +308,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 let sb = null;
 let currentProfile = null; // { id, full_name, email, role, official_allocation }
 let holidaySet = new Set(); // set of 'YYYY-MM-DD' strings for fast lookup
+let editingRequestId = null;
 
 function configIsMissing(){
   return !SUPABASE_URL || !SUPABASE_ANON_KEY
@@ -502,7 +509,10 @@ async function loadMyRequests(){
         <div class="ttype">${r.note ? r.note : 'No note'}</div>
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
         <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
-        ${r.status==='pending' ? `<div class="ticket-actions"><button class="btn-cancel" data-cancel="${r.id}">Cancel request</button></div>` : ''}
+        <div class="ticket-actions">
+          <button class="btn-cancel" data-edit="${r.id}">Edit</button>
+          ${r.status==='pending' ? `<button class="btn-cancel" data-cancel="${r.id}">Cancel request</button>` : ''}
+        </div>
       </div>
       <div class="stub-side">
         <span class="status-pill status-${r.status}">${r.status}</span>
@@ -514,6 +524,8 @@ async function loadMyRequests(){
       </div>
     `;
     list.appendChild(card);
+    const editBtn = card.querySelector('[data-edit]');
+    if(editBtn) editBtn.addEventListener('click', () => enterEditMode(r));
   });
   list.querySelectorAll('[data-cancel]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -632,6 +644,31 @@ async function reviewRequest(id, status){
   await refreshAll();
 }
 
+function enterEditMode(r){
+  editingRequestId = r.id;
+  document.getElementById('req-type').value = r.type;
+  document.getElementById('req-start').value = r.start_date;
+  document.getElementById('req-end').value = r.end_date;
+  document.getElementById('req-note').value = r.note || '';
+  updateDaysPreview();
+  document.getElementById('edit-banner').style.display = 'block';
+  document.getElementById('req-submit').textContent = 'Save changes';
+  document.querySelector('.tab[data-view="mine"]').click();
+  document.getElementById('req-submit').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+function exitEditMode(){
+  editingRequestId = null;
+  document.getElementById('edit-banner').style.display = 'none';
+  document.getElementById('req-submit').textContent = 'Submit request';
+  document.getElementById('req-type').value = 'vacation';
+  document.getElementById('req-start').value = '';
+  document.getElementById('req-end').value = '';
+  document.getElementById('req-note').value = '';
+  updateDaysPreview();
+}
+document.getElementById('cancel-edit-btn').addEventListener('click', exitEditMode);
+
 /* ---------- request form ---------- */
 function updateDaysPreview(){
   const start = document.getElementById('req-start').value;
@@ -654,22 +691,30 @@ document.getElementById('req-submit').addEventListener('click', async () => {
     return;
   }
 
-  const { error } = await sb.from('requests').insert({
-    employee_id: currentProfile.id,
-    type, start_date: start, end_date: end,
-    days_count: days, note: note || null,
-    status: 'pending'
-  });
+  let error;
+  if(editingRequestId){
+    const res = await sb.from('requests').update({
+      type, start_date: start, end_date: end,
+      days_count: days, note: note || null,
+      status: 'pending', reviewed_by: null, reviewed_at: null
+    }).eq('id', editingRequestId);
+    error = res.error;
+  } else {
+    const res = await sb.from('requests').insert({
+      employee_id: currentProfile.id,
+      type, start_date: start, end_date: end,
+      days_count: days, note: note || null,
+      status: 'pending'
+    });
+    error = res.error;
+  }
 
   if(error){
     setMsg(msgEl, error.message, false);
     return;
   }
-  setMsg(msgEl, "Request submitted — waiting on approval.", true);
-  document.getElementById('req-start').value = "";
-  document.getElementById('req-end').value = "";
-  document.getElementById('req-note').value = "";
-  updateDaysPreview();
+  setMsg(msgEl, editingRequestId ? "Request updated — waiting on approval." : "Request submitted — waiting on approval.", true);
+  exitEditMode();
   await refreshAll();
 });
 
