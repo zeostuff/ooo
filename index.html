@@ -300,6 +300,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let sb = null;
 let currentProfile = null; // { id, full_name, email, role, official_allocation }
+let holidaySet = new Set(); // set of 'YYYY-MM-DD' strings for fast lookup
 
 function configIsMissing(){
   return !SUPABASE_URL || !SUPABASE_ANON_KEY
@@ -328,6 +329,9 @@ function fmtDate(d){
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
 }
+function isoLocal(d){
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0');
+}
 function businessDays(startStr, endStr){
   if(!startStr || !endStr) return 0;
   let start = new Date(startStr + "T00:00:00");
@@ -337,7 +341,8 @@ function businessDays(startStr, endStr){
   let d = new Date(start);
   while(d <= end){
     const day = d.getDay();
-    if(day !== 0 && day !== 6) count++;
+    const iso = isoLocal(d);
+    if(day !== 0 && day !== 6 && !holidaySet.has(iso)) count++;
     d.setDate(d.getDate() + 1);
   }
   return count;
@@ -419,6 +424,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 /* ---------- data refresh ---------- */
 async function refreshAll(){
+  await loadHolidaySet(); // must finish first — the day-counter depends on it
   await Promise.all([
     loadBoard(),
     loadMyRequests(),
@@ -426,6 +432,12 @@ async function refreshAll(){
     loadHolidays(),
     currentProfile.role === 'admin' ? loadPending() : Promise.resolve()
   ]);
+  updateDaysPreview(); // re-check the open request form now that holidays are current
+}
+
+async function loadHolidaySet(){
+  const { data } = await sb.from('holidays').select('holiday_date');
+  holidaySet = new Set((data || []).map(h => h.holiday_date));
 }
 
 async function loadBoard(){
