@@ -501,6 +501,7 @@ async function loadMyRequests(){
         <div class="tname">${r.type.charAt(0).toUpperCase()+r.type.slice(1)}</div>
         <div class="ttype">${r.note ? r.note : 'No note'}</div>
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
+        <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
         ${r.status==='pending' ? `<div class="ticket-actions"><button class="btn-cancel" data-cancel="${r.id}">Cancel request</button></div>` : ''}
       </div>
       <div class="stub-side">
@@ -541,6 +542,7 @@ async function loadTeamApproved(){
         <div class="tname">${r.profiles.full_name}</div>
         <div class="ttype">${r.type}</div>
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
+        <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
       </div>
       <div class="stub-side">
         <span class="status-pill status-approved">approved</span>
@@ -596,6 +598,7 @@ async function loadPending(){
         <div class="tname">${r.profiles.full_name} · ${r.type}</div>
         <div class="ttype">${r.note ? r.note : 'No note'}</div>
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
+        <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
         <div class="ticket-actions">
           <button class="btn-approve" data-approve="${r.id}">Approve</button>
           <button class="btn-deny" data-deny="${r.id}">Deny</button>
