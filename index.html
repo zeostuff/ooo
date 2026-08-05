@@ -279,7 +279,7 @@
       <h2>Pending requests</h2>
       <div class="tickets" id="pending-list"></div>
     </div>
-    <div class="panel-box">
+    <div class="panel-box" id="holiday-manage-box">
       <h2>Add a company holiday</h2>
       <div class="form-grid">
         <div class="field-inline">
@@ -419,8 +419,11 @@ async function bootApp(){
   document.getElementById('who-name').textContent = profile.full_name;
   document.getElementById('who-email').textContent = profile.email;
   document.getElementById('who-role').textContent = profile.role.toUpperCase();
-  if(profile.role === 'admin'){
+  if(profile.role === 'admin' || profile.role === 'manager'){
     document.getElementById('approvals-tab').style.display = 'inline-block';
+  }
+  if(profile.role !== 'admin'){
+    document.getElementById('holiday-manage-box').style.display = 'none';
   }
   await refreshAll();
 }
@@ -443,7 +446,7 @@ async function refreshAll(){
     loadMyRequests(),
     loadTeamApproved(),
     loadHolidays(),
-    currentProfile.role === 'admin' ? loadPending() : Promise.resolve()
+    (currentProfile.role === 'admin' || currentProfile.role === 'manager') ? loadPending() : Promise.resolve()
   ]);
   updateDaysPreview(); // re-check the open request form now that holidays are current
 }
