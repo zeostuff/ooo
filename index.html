@@ -218,10 +218,12 @@
     <button class="tab active" data-view="mine">My Time Off</button>
     <button class="tab" data-view="team">Team Calendar</button>
     <button class="tab" data-view="approvals" id="approvals-tab" style="display:none;">Approvals</button>
+    <button class="tab" data-view="holidays">Holidays</button>
   </div>
 
   <!-- ===== MY TIME OFF ===== -->
   <section class="view active" id="view-mine">
+    <div style="font-size:12px;color:var(--slate-dim);margin-bottom:8px;" id="mine-year-label"></div>
     <div class="balances">
       <div class="balance-card"><div class="num" id="bal-allocated">–</div><div class="label">Allocated</div></div>
       <div class="balance-card"><div class="num" id="bal-used">–</div><div class="label">Used (approved)</div></div>
@@ -277,21 +279,17 @@
       <h2>Approved team time off</h2>
       <div class="tickets" id="team-list"></div>
     </div>
-    <div class="panel-box">
-      <h2>Company holidays</h2>
-      <div class="tickets" id="holiday-list"></div>
-    </div>
   </section>
 
-  <!-- ===== APPROVALS (admin) ===== -->
+  <!-- ===== APPROVALS (admin/manager) ===== -->
   <section class="view" id="view-approvals">
     <div class="panel-box" id="team-balances-box">
-      <h2>Team balances</h2>
+      <h2>Team balances <span style="color:var(--slate-dim);font-weight:400;">— <span id="team-balances-year"></span></span></h2>
       <table class="balances-table">
         <thead>
           <tr>
             <th>Employee</th>
-            <th>Allocated</th>
+            <th>Allocated <span id="allocated-col-period" style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--slate-dim);"></span></th>
             <th>Used</th>
             <th>Remaining</th>
           </tr>
@@ -302,6 +300,14 @@
     <div class="panel-box">
       <h2>Pending requests</h2>
       <div class="tickets" id="pending-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== HOLIDAYS ===== -->
+  <section class="view" id="view-holidays">
+    <div class="panel-box">
+      <h2>Company holidays</h2>
+      <div class="tickets" id="holiday-list"></div>
     </div>
     <div class="panel-box" id="holiday-manage-box">
       <h2>Add a company holiday</h2>
@@ -328,6 +334,10 @@
    ============================================================ */
 const SUPABASE_URL = "https://gjrranftjjwbissygzok.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdqcnJhbmZ0amp3Ymlzc3lnem9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5MjU4MTUsImV4cCI6MjEwMTUwMTgxNX0.SwyPikCnUkex__KAcy8ehNjI2Rqowh_JwSdI623kfl4";
+
+/* Update this one line each year (same time you add the new year's holidays):
+   it's shown next to "Allocated" so everyone sees the usable window, not just the number. */
+const ALLOCATION_PERIOD_LABEL = "Jul 1, 2026 – Jun 30, 2027";
 
 let sb = null;
 let currentProfile = null; // { id, full_name, email, role, official_allocation }
@@ -516,8 +526,11 @@ async function loadMyRequests(){
     .order('created_at', { ascending:false });
 
   const allocated = currentProfile.official_allocation;
-  const approvedVacation = (data||[]).filter(r=>r.status==='approved' && r.type==='vacation').reduce((s,r)=>s+Number(r.days_count),0);
-  const pendingVacation = (data||[]).filter(r=>r.status==='pending' && r.type==='vacation').reduce((s,r)=>s+Number(r.days_count),0);
+  const currentYear = new Date().getFullYear();
+  const thisYear = (data || []).filter(r => r.start_date && r.start_date.slice(0,4) === String(currentYear));
+  const approvedVacation = thisYear.filter(r=>r.status==='approved' && r.type==='vacation').reduce((s,r)=>s+Number(r.days_count),0);
+  const pendingVacation = thisYear.filter(r=>r.status==='pending' && r.type==='vacation').reduce((s,r)=>s+Number(r.days_count),0);
+  document.getElementById('mine-year-label').textContent = currentYear + " allocation — usable through " + ALLOCATION_PERIOD_LABEL.split("–")[1].trim();
   document.getElementById('bal-allocated').textContent = allocated;
   document.getElementById('bal-used').textContent = approvedVacation;
   document.getElementById('bal-pending').textContent = pendingVacation;
@@ -606,7 +619,21 @@ async function loadHolidays(){
     list.innerHTML = '<div class="empty-state">No holidays added yet.</div>';
     return;
   }
+  let lastYear = null;
   data.forEach(h => {
+    const year = h.holiday_date.slice(0,4);
+    if(year !== lastYear){
+      lastYear = year;
+      const divider = document.createElement('div');
+      divider.textContent = year;
+      divider.style.fontFamily = "'Space Mono', monospace";
+      divider.style.fontSize = "12px";
+      divider.style.letterSpacing = ".08em";
+      divider.style.color = "var(--slate-dim)";
+      divider.style.textTransform = "uppercase";
+      divider.style.margin = list.children.length ? "18px 0 6px" : "0 0 6px";
+      list.appendChild(divider);
+    }
     const card = document.createElement('div');
     card.className = 'ticket';
     card.innerHTML = `
@@ -665,14 +692,19 @@ async function loadPending(){
 }
 
 async function loadTeamBalances(){
+  const currentYear = new Date().getFullYear();
   const { data: profiles } = await sb.from('profiles').select('id, full_name, official_allocation').order('full_name', { ascending:true });
-  const { data: approved } = await sb.from('requests').select('employee_id, days_count').eq('status','approved').eq('type','vacation');
+  const { data: approved } = await sb.from('requests').select('employee_id, days_count, start_date').eq('status','approved').eq('type','vacation');
 
   const usedMap = {};
   (approved || []).forEach(r => {
-    usedMap[r.employee_id] = (usedMap[r.employee_id] || 0) + Number(r.days_count);
+    if(r.start_date && r.start_date.slice(0,4) === String(currentYear)){
+      usedMap[r.employee_id] = (usedMap[r.employee_id] || 0) + Number(r.days_count);
+    }
   });
 
+  document.getElementById('team-balances-year').textContent = currentYear;
+  document.getElementById('allocated-col-period').textContent = "(" + ALLOCATION_PERIOD_LABEL + ")";
   const tbody = document.getElementById('team-balances-body');
   tbody.innerHTML = "";
   (profiles || []).forEach(p => {
