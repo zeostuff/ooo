@@ -3,26 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RevMasters · Time Off</title>
+<title>Invoker · Time Off</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* ============ TOKENS ============ */
   :root{
-    --page-bg:#EEF1F5;
-    --ink:#1A2230;
+    --page-bg:#F4F1EA;
+    --ink:#1F1E1D;
     --panel:#FFFFFF;
-    --panel-edge:#DCE3EB;
-    --amber:#3B6EA5;
-    --amber-tint:#D7E4F0;
-    --amber-dim:#234A73;
-    --slate:#414B5C;
-    --slate-dim:#7E8898;
+    --panel-edge:#E3DDD0;
+    --amber:#D97757;
+    --amber-tint:#F3DCCF;
+    --amber-dim:#8A4A30;
+    --slate:#4A453D;
+    --slate-dim:#8C8676;
     --green:#3F7A5A;
     --rose:#B14A40;
-    --paper:#F7F9FC;
-    --paper-ink:#202938;
+    --paper:#FBF9F5;
+    --paper-ink:#2B2620;
     --radius:10px;
   }
   *{box-sizing:border-box;}
@@ -62,7 +62,7 @@
     background:var(--amber);color:#fff;font-weight:700;padding:12px 16px;width:100%;
     font-size:14px;letter-spacing:.02em;
   }
-  .btn-primary:hover{background:#2C567F;}
+  .btn-primary:hover{background:#C15F41;}
   .btn-ghost{
     background:transparent;border:1px solid var(--panel-edge);color:var(--slate);padding:10px 14px;font-size:13px;
   }
@@ -141,9 +141,9 @@
     border-left:2px dotted rgba(0,0,0,.2);
   }
   .ticket .tname{font-weight:700;font-size:14px;}
-  .ticket .ttype{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#7C8698;margin-top:2px;}
+  .ticket .ttype{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8A8072;margin-top:2px;}
   .ticket .tdates{font-family:'Space Mono',monospace;font-size:13px;margin-top:8px;}
-  .ticket .tnote{font-size:12px;color:#556173;margin-top:8px;}
+  .ticket .tnote{font-size:12px;color:#6B6255;margin-top:8px;}
   .status-pill{
     font-family:'Space Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.05em;
     padding:3px 9px;border-radius:20px;font-weight:700;
@@ -152,13 +152,23 @@
   .status-approved{background:#d7ede1;color:#276b4b;}
   .status-denied{background:#f6d9d6;color:#a5352c;}
   .stub-days{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;}
-  .stub-days-label{font-size:10px;color:#7C8698;text-transform:uppercase;}
-  .stub-total{font-family:'Space Mono',monospace;font-size:12px;color:#9AA4B4;margin-top:4px;}
+  .stub-days-label{font-size:10px;color:#8A8072;text-transform:uppercase;}
+  .stub-total{font-family:'Space Mono',monospace;font-size:12px;color:#A69C8C;margin-top:4px;}
   .ticket-actions{margin-top:10px;display:flex;gap:6px;}
   .btn-approve{background:var(--green);color:#fff;font-size:12px;padding:7px 12px;font-weight:700;}
   .btn-deny{background:var(--rose);color:#fff;font-size:12px;padding:7px 12px;font-weight:700;}
-  .btn-cancel{background:transparent;border:1px solid #C7D0DC;color:#556173;font-size:12px;padding:7px 12px;}
+  .btn-cancel{background:transparent;border:1px solid #D6CFC2;color:#6B6255;font-size:12px;padding:7px 12px;}
   .empty-state{color:var(--slate-dim);font-size:13px;font-style:italic;padding:18px 0;}
+
+  /* ============ TEAM BALANCES TABLE (admin) ============ */
+  .balances-table{width:100%;border-collapse:collapse;}
+  .balances-table th{
+    text-align:left;padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--slate-dim);border-bottom:1px solid var(--panel-edge);
+  }
+  .balances-table td{padding:9px 6px;font-size:13px;border-bottom:1px solid var(--panel-edge);color:var(--ink);}
+  .balances-table td.num{font-family:'Space Mono',monospace;}
+  .balances-table tr:last-child td{border-bottom:none;}
 
   @media (max-width:560px){
     .form-grid{grid-template-columns:1fr;}
@@ -172,11 +182,11 @@
 <!-- ============ LOGIN SCREEN ============ -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="brand">RevMasters</div>
+    <div class="brand">Invoker</div>
     <h1>Sign in to Time Off</h1>
     <div class="field">
       <label for="login-email">Email</label>
-      <input id="login-email" type="email" autocomplete="username" placeholder="you@revmasters.com">
+      <input id="login-email" type="email" autocomplete="username" placeholder="you@invoker.com">
     </div>
     <div class="field">
       <label for="login-password">Password</label>
@@ -190,7 +200,7 @@
 <!-- ============ APP ============ -->
 <div id="app">
   <header class="top">
-    <div class="brand" style="margin-top:8px;">RevMasters · Time Off</div>
+    <div class="brand" style="margin-top:8px;">Invoker · Time Off</div>
     <div class="who">
       <strong id="who-name">—</strong>
       <span id="who-email"></span>
@@ -200,7 +210,7 @@
   </header>
 
   <div class="board">
-    <div class="board-head">Upcoming departures</div>
+    <div class="board-head">Upcoming Vacations / OOO</div>
     <div id="board-body"></div>
   </div>
 
@@ -221,7 +231,7 @@
 
     <div class="panel-box">
       <h2>Request time off</h2>
-      <div id="edit-banner" style="display:none;background:rgba(59,110,165,0.12);border:1px solid var(--amber-dim);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--amber-dim);margin-bottom:14px;">
+      <div id="edit-banner" style="display:none;background:rgba(217,119,87,0.12);border:1px solid var(--amber-dim);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--amber-dim);margin-bottom:14px;">
         Editing your request — saving will resend it for approval.
         <button id="cancel-edit-btn" class="btn-ghost" style="padding:4px 10px;font-size:12px;margin-left:8px;">Cancel edit</button>
       </div>
@@ -275,6 +285,20 @@
 
   <!-- ===== APPROVALS (admin) ===== -->
   <section class="view" id="view-approvals">
+    <div class="panel-box" id="team-balances-box">
+      <h2>Team balances</h2>
+      <table class="balances-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Allocated</th>
+            <th>Used</th>
+            <th>Remaining</th>
+          </tr>
+        </thead>
+        <tbody id="team-balances-body"></tbody>
+      </table>
+    </div>
     <div class="panel-box">
       <h2>Pending requests</h2>
       <div class="tickets" id="pending-list"></div>
@@ -424,6 +448,7 @@ async function bootApp(){
   }
   if(profile.role !== 'admin'){
     document.getElementById('holiday-manage-box').style.display = 'none';
+    document.getElementById('team-balances-box').style.display = 'none';
   }
   await refreshAll();
 }
@@ -446,7 +471,8 @@ async function refreshAll(){
     loadMyRequests(),
     loadTeamApproved(),
     loadHolidays(),
-    (currentProfile.role === 'admin' || currentProfile.role === 'manager') ? loadPending() : Promise.resolve()
+    (currentProfile.role === 'admin' || currentProfile.role === 'manager') ? loadPending() : Promise.resolve(),
+    currentProfile.role === 'admin' ? loadTeamBalances() : Promise.resolve()
   ]);
   updateDaysPreview(); // re-check the open request form now that holidays are current
 }
@@ -635,6 +661,31 @@ async function loadPending(){
   });
   list.querySelectorAll('[data-deny]').forEach(btn => {
     btn.addEventListener('click', () => reviewRequest(btn.dataset.deny, 'denied'));
+  });
+}
+
+async function loadTeamBalances(){
+  const { data: profiles } = await sb.from('profiles').select('id, full_name, official_allocation').order('full_name', { ascending:true });
+  const { data: approved } = await sb.from('requests').select('employee_id, days_count').eq('status','approved').eq('type','vacation');
+
+  const usedMap = {};
+  (approved || []).forEach(r => {
+    usedMap[r.employee_id] = (usedMap[r.employee_id] || 0) + Number(r.days_count);
+  });
+
+  const tbody = document.getElementById('team-balances-body');
+  tbody.innerHTML = "";
+  (profiles || []).forEach(p => {
+    const used = usedMap[p.id] || 0;
+    const remaining = Math.max(p.official_allocation - used, 0);
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${p.full_name}</td>
+      <td class="num">${p.official_allocation}</td>
+      <td class="num">${used}</td>
+      <td class="num">${remaining}</td>
+    `;
+    tbody.appendChild(row);
   });
 }
 
