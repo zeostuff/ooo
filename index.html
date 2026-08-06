@@ -106,6 +106,10 @@
     border-bottom:2px solid transparent;font-size:14px;font-weight:600;border-radius:0;
   }
   .tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+  .tab-badge{
+    display:inline-block;background:var(--rose);color:#fff;font-family:'Space Mono',monospace;
+    font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:6px;vertical-align:middle;
+  }
   .view{display:none;}
   .view.active{display:block;}
 
@@ -217,7 +221,7 @@
   <div class="tabs">
     <button class="tab active" data-view="mine">My Time Off</button>
     <button class="tab" data-view="team">Team Calendar</button>
-    <button class="tab" data-view="approvals" id="approvals-tab" style="display:none;">Approvals</button>
+    <button class="tab" data-view="approvals" id="approvals-tab" style="display:none;">Approvals<span id="approvals-badge" class="tab-badge" style="display:none;"></span></button>
     <button class="tab" data-view="holidays">Holidays</button>
   </div>
 
@@ -242,8 +246,10 @@
           <label for="req-type">Type</label>
           <select id="req-type">
             <option value="vacation">Vacation</option>
-            <option value="sick">Sick day</option>
-            <option value="other">Other</option>
+            <option value="sick">Sick Day</option>
+            <option value="wedding">Wedding Day</option>
+            <option value="family">Family</option>
+            <option value="other">Day Off</option>
           </select>
         </div>
         <div class="field-inline">
@@ -283,6 +289,10 @@
 
   <!-- ===== APPROVALS (admin/manager) ===== -->
   <section class="view" id="view-approvals">
+    <div class="panel-box">
+      <h2>Pending requests</h2>
+      <div class="tickets" id="pending-list"></div>
+    </div>
     <div class="panel-box" id="team-balances-box">
       <h2>Team balances <span style="color:var(--slate-dim);font-weight:400;">— <span id="team-balances-year"></span></span></h2>
       <table class="balances-table">
@@ -296,10 +306,6 @@
         </thead>
         <tbody id="team-balances-body"></tbody>
       </table>
-    </div>
-    <div class="panel-box">
-      <h2>Pending requests</h2>
-      <div class="tickets" id="pending-list"></div>
     </div>
   </section>
 
@@ -364,6 +370,15 @@ if(configIsMissing()){
   } catch(e){
     showLoginError("Couldn't connect to the database. Double-check SUPABASE_URL and SUPABASE_ANON_KEY are correct.");
   }
+}
+
+/* 'vacation' and 'other' (labeled "Day Off") count against the paid allocation.
+   'sick', 'wedding', and 'family' are tracked and shown as OOO, but don't use up paid days. */
+const PAID_TYPES = ['vacation','other'];
+function isPaidType(type){ return PAID_TYPES.includes(type); }
+function typeLabel(type){
+  const map = { vacation:'Vacation', sick:'Sick Day', wedding:'Wedding Day', family:'Family', other:'Day Off' };
+  return map[type] || type;
 }
 
 /* ---------- helpers ---------- */
@@ -511,7 +526,7 @@ async function loadBoard(){
     row.className = 'board-row';
     row.innerHTML = `
       <span class="name">${r.profiles.full_name}</span>
-      <span class="type">${r.type}</span>
+      <span class="type">${typeLabel(r.type)}</span>
       <span class="dates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</span>
       <span></span>
     `;
@@ -528,8 +543,8 @@ async function loadMyRequests(){
   const allocated = currentProfile.official_allocation;
   const currentYear = new Date().getFullYear();
   const thisYear = (data || []).filter(r => r.start_date && r.start_date.slice(0,4) === String(currentYear));
-  const approvedVacation = thisYear.filter(r=>r.status==='approved' && r.type==='vacation').reduce((s,r)=>s+Number(r.days_count),0);
-  const pendingVacation = thisYear.filter(r=>r.status==='pending' && r.type==='vacation').reduce((s,r)=>s+Number(r.days_count),0);
+  const approvedVacation = thisYear.filter(r=>r.status==='approved' && isPaidType(r.type)).reduce((s,r)=>s+Number(r.days_count),0);
+  const pendingVacation = thisYear.filter(r=>r.status==='pending' && isPaidType(r.type)).reduce((s,r)=>s+Number(r.days_count),0);
   document.getElementById('mine-year-label').textContent = currentYear + " allocation — usable through " + ALLOCATION_PERIOD_LABEL.split("–")[1].trim();
   document.getElementById('bal-allocated').textContent = allocated;
   document.getElementById('bal-used').textContent = approvedVacation;
@@ -547,7 +562,7 @@ async function loadMyRequests(){
     card.className = 'ticket';
     card.innerHTML = `
       <div class="stub-main">
-        <div class="tname">${r.type.charAt(0).toUpperCase()+r.type.slice(1)}</div>
+        <div class="tname">${typeLabel(r.type)}</div>
         <div class="ttype">${r.note ? r.note : 'No note'}</div>
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
         <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
@@ -560,7 +575,7 @@ async function loadMyRequests(){
         <span class="status-pill status-${r.status}">${r.status}</span>
         <div>
           <div class="stub-days">${r.days_count}</div>
-          <div class="stub-days-label">paid days</div>
+          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (unpaid)'}</div>
           <div class="stub-total">${totalCalendarDays(r.start_date, r.end_date)} total</div>
         </div>
       </div>
@@ -594,7 +609,7 @@ async function loadTeamApproved(){
     card.innerHTML = `
       <div class="stub-main">
         <div class="tname">${r.profiles.full_name}</div>
-        <div class="ttype">${r.type}</div>
+        <div class="ttype">${typeLabel(r.type)}</div>
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
         <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
       </div>
@@ -602,7 +617,7 @@ async function loadTeamApproved(){
         <span class="status-pill status-approved">approved</span>
         <div>
           <div class="stub-days">${r.days_count}</div>
-          <div class="stub-days-label">paid days</div>
+          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (unpaid)'}</div>
           <div class="stub-total">${totalCalendarDays(r.start_date, r.end_date)} total</div>
         </div>
       </div>
@@ -652,6 +667,15 @@ async function loadPending(){
     .select('*, profiles:employee_id(full_name)')
     .eq('status','pending')
     .order('created_at', { ascending:true });
+
+  const badge = document.getElementById('approvals-badge');
+  if(data && data.length > 0){
+    badge.textContent = data.length;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+
   const list = document.getElementById('pending-list');
   list.innerHTML = "";
   if(!data || data.length === 0){
@@ -663,7 +687,7 @@ async function loadPending(){
     card.className = 'ticket';
     card.innerHTML = `
       <div class="stub-main">
-        <div class="tname">${r.profiles.full_name} · ${r.type}</div>
+        <div class="tname">${r.profiles.full_name} · ${typeLabel(r.type)}</div>
         <div class="ttype">${r.note ? r.note : 'No note'}</div>
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
         <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
@@ -676,7 +700,7 @@ async function loadPending(){
         <span class="status-pill status-pending">pending</span>
         <div>
           <div class="stub-days">${r.days_count}</div>
-          <div class="stub-days-label">paid days</div>
+          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (unpaid)'}</div>
           <div class="stub-total">${totalCalendarDays(r.start_date, r.end_date)} total</div>
         </div>
       </div>
@@ -694,7 +718,7 @@ async function loadPending(){
 async function loadTeamBalances(){
   const currentYear = new Date().getFullYear();
   const { data: profiles } = await sb.from('profiles').select('id, full_name, official_allocation').order('full_name', { ascending:true });
-  const { data: approved } = await sb.from('requests').select('employee_id, days_count, start_date').eq('status','approved').eq('type','vacation');
+  const { data: approved } = await sb.from('requests').select('employee_id, days_count, start_date, type').eq('status','approved').in('type', PAID_TYPES);
 
   const usedMap = {};
   (approved || []).forEach(r => {
