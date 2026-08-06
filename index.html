@@ -569,14 +569,13 @@ async function loadMyRequests(){
         <div class="ticket-actions">
           <button class="btn-cancel" data-edit="${r.id}">Edit</button>
           ${r.status==='pending' ? `<button class="btn-cancel" data-cancel="${r.id}">Cancel request</button>` : ''}
-          ${currentProfile.role==='admin' ? `<button class="btn-deny" data-delete="${r.id}">Delete</button>` : ''}
         </div>
       </div>
       <div class="stub-side">
         <span class="status-pill status-${r.status}">${r.status}</span>
         <div>
           <div class="stub-days">${r.days_count}</div>
-          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (not counted)'}</div>
+          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (unpaid)'}</div>
           <div class="stub-total">${totalCalendarDays(r.start_date, r.end_date)} total</div>
         </div>
       </div>
@@ -584,12 +583,6 @@ async function loadMyRequests(){
     list.appendChild(card);
     const editBtn = card.querySelector('[data-edit]');
     if(editBtn) editBtn.addEventListener('click', () => enterEditMode(r));
-    const delBtn = card.querySelector('[data-delete]');
-    if(delBtn) delBtn.addEventListener('click', async () => {
-      if(!confirm('Delete this request permanently? This cannot be undone.')) return;
-      await sb.from('requests').delete().eq('id', r.id);
-      await refreshAll();
-    });
   });
   list.querySelectorAll('[data-cancel]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -619,24 +612,17 @@ async function loadTeamApproved(){
         <div class="ttype">${typeLabel(r.type)}</div>
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
         <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
-        ${currentProfile.role==='admin' ? `<div class="ticket-actions"><button class="btn-deny" data-delete="${r.id}">Delete</button></div>` : ''}
       </div>
       <div class="stub-side">
         <span class="status-pill status-approved">approved</span>
         <div>
           <div class="stub-days">${r.days_count}</div>
-          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (not counted)'}</div>
+          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (unpaid)'}</div>
           <div class="stub-total">${totalCalendarDays(r.start_date, r.end_date)} total</div>
         </div>
       </div>
     `;
     list.appendChild(card);
-    const delBtn = card.querySelector('[data-delete]');
-    if(delBtn) delBtn.addEventListener('click', async () => {
-      if(!confirm('Delete this approved request permanently? This cannot be undone.')) return;
-      await sb.from('requests').delete().eq('id', r.id);
-      await refreshAll();
-    });
   });
 }
 
@@ -708,14 +694,13 @@ async function loadPending(){
         <div class="ticket-actions">
           <button class="btn-approve" data-approve="${r.id}">Approve</button>
           <button class="btn-deny" data-deny="${r.id}">Deny</button>
-          ${currentProfile.role==='admin' ? `<button class="btn-cancel" data-delete="${r.id}">Delete</button>` : ''}
         </div>
       </div>
       <div class="stub-side">
         <span class="status-pill status-pending">pending</span>
         <div>
           <div class="stub-days">${r.days_count}</div>
-          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (not counted)'}</div>
+          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (unpaid)'}</div>
           <div class="stub-total">${totalCalendarDays(r.start_date, r.end_date)} total</div>
         </div>
       </div>
@@ -727,13 +712,6 @@ async function loadPending(){
   });
   list.querySelectorAll('[data-deny]').forEach(btn => {
     btn.addEventListener('click', () => reviewRequest(btn.dataset.deny, 'denied'));
-  });
-  list.querySelectorAll('[data-delete]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if(!confirm('Delete this request permanently? This cannot be undone.')) return;
-      await sb.from('requests').delete().eq('id', btn.dataset.delete);
-      await refreshAll();
-    });
   });
 }
 
