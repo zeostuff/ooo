@@ -97,6 +97,7 @@
   .board-row .name{color:var(--ink);}
   .board-row .type{color:var(--slate-dim);font-size:11px;text-transform:uppercase;}
   .board-row .dates{color:var(--amber);white-space:nowrap;}
+  .board-row .back{color:var(--slate-dim);font-size:11px;white-space:nowrap;}
   .board-empty{padding:16px;color:var(--slate-dim);font-size:13px;font-style:italic;}
 
   /* ============ TABS ============ */
@@ -214,7 +215,7 @@
   </header>
 
   <div class="board">
-    <div class="board-head">Upcoming Vacations / OOO</div>
+    <div class="board-head">Upcoming &amp; Ongoing</div>
     <div id="board-body"></div>
   </div>
 
@@ -386,6 +387,14 @@ function fmtDate(d){
   const dt = new Date(d + "T00:00:00");
   return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
 }
+function addDays(dateStr, n){
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return d;
+}
+function fmtDateWithWeekday(d){
+  return d.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short' });
+}
 function totalCalendarDays(startStr, endStr){
   const start = new Date(startStr + "T00:00:00");
   const end = new Date(endStr + "T00:00:00");
@@ -513,8 +522,7 @@ async function loadBoard(){
     .select('*, profiles:employee_id(full_name)')
     .eq('status','approved')
     .gte('end_date', today)
-    .order('start_date', { ascending:true })
-    .limit(6);
+    .order('start_date', { ascending:true });
   const el = document.getElementById('board-body');
   el.innerHTML = "";
   if(!data || data.length === 0){
@@ -524,11 +532,12 @@ async function loadBoard(){
   data.forEach(r => {
     const row = document.createElement('div');
     row.className = 'board-row';
+    const backDate = addDays(r.end_date, 1);
     row.innerHTML = `
       <span class="name">${r.profiles.full_name}</span>
       <span class="type">${typeLabel(r.type)}</span>
       <span class="dates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</span>
-      <span></span>
+      <span class="back">Back in office ${fmtDateWithWeekday(backDate)}</span>
     `;
     el.appendChild(row);
   });
