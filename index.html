@@ -177,8 +177,18 @@
 
   @media (max-width:560px){
     .form-grid{grid-template-columns:1fr;}
+    .form-grid .field-inline{min-width:0;}
+    .form-grid input, .form-grid select, .form-grid textarea{min-width:0;width:100%;}
     .ticket{grid-template-columns:1fr;}
     .ticket .stub-side{border-left:none;border-top:2px dotted rgba(0,0,0,.2);flex-direction:row;align-items:center;}
+
+    .board-row{
+      display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;
+    }
+    .board-row .name{flex:0 0 auto;}
+    .board-row .type{flex:0 0 auto;}
+    .board-row .dates{flex:0 0 auto;white-space:normal;}
+    .board-row .back{flex:1 1 100%;white-space:normal;}
   }
 </style>
 </head>
@@ -395,6 +405,13 @@ function addDays(dateStr, n){
 function fmtDateWithWeekday(d){
   return d.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short' });
 }
+function nextWorkingDay(d){
+  const day = new Date(d);
+  while(day.getDay() === 0 || day.getDay() === 6 || holidaySet.has(isoLocal(day))){
+    day.setDate(day.getDate() + 1);
+  }
+  return day;
+}
 function totalCalendarDays(startStr, endStr){
   const start = new Date(startStr + "T00:00:00");
   const end = new Date(endStr + "T00:00:00");
@@ -532,7 +549,7 @@ async function loadBoard(){
   data.forEach(r => {
     const row = document.createElement('div');
     row.className = 'board-row';
-    const backDate = addDays(r.end_date, 1);
+    const backDate = nextWorkingDay(addDays(r.end_date, 1));
     row.innerHTML = `
       <span class="name">${r.profiles.full_name}</span>
       <span class="type">${typeLabel(r.type)}</span>
@@ -612,7 +629,7 @@ async function loadTeamApproved(){
   const { data } = await sb.from('requests')
     .select('*, profiles:employee_id(full_name)')
     .eq('status','approved')
-    .order('start_date', { ascending:true });
+    .order('start_date', { ascending:false });
   const list = document.getElementById('team-list');
   list.innerHTML = "";
   if(!data || data.length === 0){
