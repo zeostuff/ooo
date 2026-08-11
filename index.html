@@ -324,6 +324,9 @@
   <section class="view" id="view-holidays">
     <div class="panel-box">
       <h2>Company holidays</h2>
+      <div style="margin-bottom:14px;">
+        <select id="holiday-year-filter" style="width:auto;"></select>
+      </div>
       <div class="tickets" id="holiday-list"></div>
     </div>
     <div class="panel-box" id="holiday-manage-box">
@@ -666,18 +669,47 @@ async function loadTeamApproved(){
   });
 }
 
+let allHolidays = [];
+
 async function loadHolidays(){
   const { data } = await sb.from('holidays').select('*').order('holiday_date', { ascending:true });
+  allHolidays = data || [];
+  populateHolidayYearFilter();
+  renderHolidayList();
+}
+
+function populateHolidayYearFilter(){
+  const select = document.getElementById('holiday-year-filter');
+  const previousValue = select.value;
+  const years = [...new Set(allHolidays.map(h => h.holiday_date.slice(0,4)))].sort();
+  select.innerHTML = '<option value="all">All years</option>' +
+    years.map(y => `<option value="${y}">${y}</option>`).join('');
+  const thisYear = String(new Date().getFullYear());
+  if(previousValue && (previousValue === 'all' || years.includes(previousValue))){
+    select.value = previousValue;
+  } else if(years.includes(thisYear)){
+    select.value = thisYear;
+  } else {
+    select.value = 'all';
+  }
+}
+
+function renderHolidayList(){
+  const selected = document.getElementById('holiday-year-filter').value;
   const list = document.getElementById('holiday-list');
   list.innerHTML = "";
-  if(!data || data.length === 0){
-    list.innerHTML = '<div class="empty-state">No holidays added yet.</div>';
+  const filtered = selected === 'all'
+    ? allHolidays
+    : allHolidays.filter(h => h.holiday_date.slice(0,4) === selected);
+
+  if(filtered.length === 0){
+    list.innerHTML = '<div class="empty-state">No holidays for this year yet.</div>';
     return;
   }
   let lastYear = null;
-  data.forEach(h => {
+  filtered.forEach(h => {
     const year = h.holiday_date.slice(0,4);
-    if(year !== lastYear){
+    if(selected === 'all' && year !== lastYear){
       lastYear = year;
       const divider = document.createElement('div');
       divider.textContent = year;
@@ -895,6 +927,8 @@ document.getElementById('hol-submit').addEventListener('click', async () => {
   document.getElementById('hol-name').value = "";
   await refreshAll();
 });
+
+document.getElementById('holiday-year-filter').addEventListener('change', renderHolidayList);
 
 /* ---------- boot ---------- */
 bootApp();
