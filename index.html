@@ -70,7 +70,7 @@
   #login-error{color:var(--rose);font-size:13px;margin-top:12px;min-height:1em;}
 
   /* ============ APP SHELL ============ */
-  #app{display:none;max-width:980px;margin:0 auto;padding:0 20px 60px;}
+  #app{display:none;max-width:1240px;margin:0 auto;padding:0 20px 60px;}
   header.top{padding:24px 0 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;}
   header.top .who{font-size:13px;color:var(--slate-dim);text-align:right;}
   header.top .who strong{color:var(--ink);display:block;font-size:14px;}
@@ -130,8 +130,12 @@
   .cal-daynum{font-family:'Space Mono',monospace;}
   .cal-holiday-name{font-size:9px;margin-top:2px;line-height:1.2;}
   .cal-chips{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;}
-  .cal-chip{background:var(--amber);color:#fff;border-radius:4px;font-size:9px;padding:1px 4px;font-family:'Space Mono',monospace;}
+  .cal-chip{background:var(--amber);color:#fff;border-radius:4px;font-size:9px;padding:1px 4px;font-family:'Space Mono',monospace;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
   .cal-chip.cal-more{background:var(--slate-dim);}
+  .cal-cell.cal-today{outline:2px solid var(--amber);}
+  .cal-today .cal-daynum{font-weight:700;}
+  .cal-today-btn{background:var(--amber-tint);color:var(--amber-dim);border:1px solid var(--panel-edge);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;}
+  .cal-today-btn:hover{background:var(--amber);color:#fff;}
   #cal-day-detail{margin-top:14px;background:var(--panel);border:1px solid var(--panel-edge);border-radius:10px;padding:12px 14px;}
   .view{display:none;}
   .view.active{display:block;}
@@ -186,6 +190,17 @@
   .btn-deny{background:var(--rose);color:#fff;font-size:12px;padding:7px 12px;font-weight:700;}
   .btn-cancel{background:transparent;border:1px solid #D6CFC2;color:#6B6255;font-size:12px;padding:7px 12px;}
   .empty-state{color:var(--slate-dim);font-size:13px;font-style:italic;padding:18px 0;}
+
+  /* ============ COLLAPSIBLE PERSON GROUPS ============ */
+  .person-group{border:1px solid var(--panel-edge);border-radius:10px;margin-bottom:10px;overflow:hidden;}
+  .person-group-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--paper);cursor:pointer;}
+  .person-group-name{font-size:14px;font-weight:700;color:var(--paper-ink);}
+  .person-group-meta{display:flex;align-items:center;gap:10px;}
+  .person-group-count{font-family:'Space Mono',monospace;font-size:11px;color:var(--slate-dim);}
+  .person-group-chevron{font-size:11px;color:var(--slate-dim);display:inline-block;transition:transform .15s;}
+  .person-group.group-open .person-group-chevron{transform:rotate(90deg);}
+  .person-group-body{display:none;padding:12px 16px;}
+  .person-group.group-open .person-group-body{display:block;}
 
   /* ============ TEAM BALANCES TABLE (admin) ============ */
   .balances-table{width:100%;border-collapse:collapse;}
@@ -348,7 +363,10 @@
       <div class="cal-nav">
         <button class="cal-nav-btn" id="cal-prev" aria-label="Previous month">&larr;</button>
         <div id="cal-month-label" style="font-family:'Space Mono',monospace;font-size:14px;color:var(--ink);"></div>
-        <button class="cal-nav-btn" id="cal-next" aria-label="Next month">&rarr;</button>
+        <div style="display:flex;gap:6px;">
+          <button class="cal-today-btn" id="cal-today">Today</button>
+          <button class="cal-nav-btn" id="cal-next" aria-label="Next month">&rarr;</button>
+        </div>
       </div>
       <div class="cal-weekdays">
         <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
@@ -612,8 +630,11 @@ async function loadHolidaySet(){
   holidaySet = new Set((data || []).map(h => h.holiday_date));
 }
 
-function initials(name){
-  return (name || '').split(' ').filter(Boolean).map(p => p[0]).join('').slice(0,2).toUpperCase();
+function chipName(name){
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if(parts.length === 0) return '';
+  if(parts.length === 1) return parts[0];
+  return parts[0] + ' ' + parts[1][0].toUpperCase() + '.';
 }
 
 function renderCalendarMonth(){
@@ -650,7 +671,7 @@ function renderCalendarMonth(){
     const shown = dayRequests.slice(0, 3);
     const extra = dayRequests.length - shown.length;
     const chipsHtml = shown.map(r =>
-      `<span class="cal-chip" title="${r.profiles.full_name} — ${typeLabel(r.type)}">${initials(r.profiles.full_name)}</span>`
+      `<span class="cal-chip" title="${r.profiles.full_name} — ${typeLabel(r.type)}">${chipName(r.profiles.full_name)}</span>`
     ).join('') + (extra > 0 ? `<span class="cal-chip cal-more">+${extra}</span>` : '');
 
     cell.innerHTML = `
@@ -658,6 +679,7 @@ function renderCalendarMonth(){
       ${holiday ? `<div class="cal-holiday-name">${holiday.name}</div>` : ''}
       <div class="cal-chips">${chipsHtml}</div>
     `;
+    if(iso === isoLocal(new Date())) cell.classList.add('cal-today');
     cell.addEventListener('click', () => showCalendarDayDetail(iso, dayRequests, holiday));
     grid.appendChild(cell);
   }
@@ -694,6 +716,10 @@ document.getElementById('cal-prev').addEventListener('click', () => {
 });
 document.getElementById('cal-next').addEventListener('click', () => {
   calendarViewDate.setMonth(calendarViewDate.getMonth() + 1);
+  renderCalendarMonth();
+});
+document.getElementById('cal-today').addEventListener('click', () => {
+  calendarViewDate = new Date();
   renderCalendarMonth();
 });
 
@@ -796,38 +822,79 @@ async function loadTeamApproved(){
     .order('start_date', { ascending:false });
   allApprovedRequests = data || [];
   const list = document.getElementById('team-list');
+  const openState = {}; // remember which groups were expanded across this refresh
+  list.querySelectorAll('[data-group]').forEach(el => {
+    openState[el.dataset.group] = el.classList.contains('group-open');
+  });
   list.innerHTML = "";
   if(!data || data.length === 0){
     list.innerHTML = '<div class="empty-state">No approved time off on the books yet.</div>';
     return;
   }
+
+  const groups = {};
   data.forEach(r => {
-    const card = document.createElement('div');
-    card.className = 'ticket';
-    card.innerHTML = `
-      <div class="stub-main">
-        <div class="tname">${r.profiles.full_name}</div>
-        <div class="ttype">${typeLabel(r.type)}</div>
-        <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
-        <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
-        ${currentProfile.role==='admin' ? `<div class="ticket-actions"><button class="btn-deny" data-delete="${r.id}">Delete</button></div>` : ''}
-      </div>
-      <div class="stub-side">
-        <span class="status-pill status-approved">approved</span>
-        <div>
-          <div class="stub-days">${r.days_count}</div>
-          <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (not counted)'}</div>
-          <div class="stub-total">${totalCalendarDays(r.start_date, r.end_date)} total</div>
-        </div>
-      </div>
+    if(!groups[r.employee_id]) groups[r.employee_id] = { name: r.profiles.full_name, requests: [] };
+    groups[r.employee_id].requests.push(r);
+  });
+  const groupList = Object.entries(groups).sort((a, b) =>
+    b[1].requests[0].start_date.localeCompare(a[1].requests[0].start_date)
+  );
+
+  groupList.forEach(([employeeId, group]) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'person-group';
+    wrapper.dataset.group = employeeId;
+    if(openState[employeeId]) wrapper.classList.add('group-open');
+
+    const header = document.createElement('div');
+    header.className = 'person-group-header';
+    header.innerHTML = `
+      <span class="person-group-name">${group.name}</span>
+      <span class="person-group-meta">
+        <span class="person-group-count">${group.requests.length} ${group.requests.length === 1 ? 'request' : 'requests'}</span>
+        <span class="person-group-chevron">&#9654;</span>
+      </span>
     `;
-    list.appendChild(card);
-    const delBtn = card.querySelector('[data-delete]');
-    if(delBtn) delBtn.addEventListener('click', async () => {
-      if(!confirm('Delete this approved request permanently? This cannot be undone.')) return;
-      await sb.from('requests').delete().eq('id', r.id);
-      await refreshAll();
+    header.addEventListener('click', () => wrapper.classList.toggle('group-open'));
+
+    const body = document.createElement('div');
+    body.className = 'person-group-body';
+    body.innerHTML = '<div class="tickets"></div>';
+    const ticketsEl = body.querySelector('.tickets');
+
+    group.requests.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'ticket';
+      card.innerHTML = `
+        <div class="stub-main">
+          <div class="tname">${typeLabel(r.type)}</div>
+          <div class="ttype">${r.note ? r.note : 'No note'}</div>
+          <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
+          <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
+          ${currentProfile.role==='admin' ? `<div class="ticket-actions"><button class="btn-deny" data-delete="${r.id}">Delete</button></div>` : ''}
+        </div>
+        <div class="stub-side">
+          <span class="status-pill status-approved">approved</span>
+          <div>
+            <div class="stub-days">${r.days_count}</div>
+            <div class="stub-days-label">${isPaidType(r.type) ? 'paid days' : 'days (not counted)'}</div>
+            <div class="stub-total">${totalCalendarDays(r.start_date, r.end_date)} total</div>
+          </div>
+        </div>
+      `;
+      ticketsEl.appendChild(card);
+      const delBtn = card.querySelector('[data-delete]');
+      if(delBtn) delBtn.addEventListener('click', async () => {
+        if(!confirm('Delete this approved request permanently? This cannot be undone.')) return;
+        await sb.from('requests').delete().eq('id', r.id);
+        await refreshAll();
+      });
     });
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(body);
+    list.appendChild(wrapper);
   });
 }
 
