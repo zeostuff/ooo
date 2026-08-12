@@ -100,13 +100,18 @@
   .board-row .back{color:var(--slate-dim);font-size:11px;white-space:nowrap;}
   .board-empty{padding:16px;color:var(--slate-dim);font-size:13px;font-style:italic;}
 
-  /* ============ TABS ============ */
-  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--panel-edge);}
-  .tab{
-    background:transparent;color:var(--slate-dim);padding:10px 4px;margin-right:18px;
-    border-bottom:2px solid transparent;font-size:14px;font-weight:600;border-radius:0;
+  /* ============ SIDEBAR NAV ============ */
+  .app-layout{display:flex;gap:28px;align-items:flex-start;}
+  .sidenav{
+    display:flex;flex-direction:column;gap:4px;width:180px;flex-shrink:0;
+    position:sticky;top:20px;
   }
-  .tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+  .main-views{flex:1;min-width:0;}
+  .nav-item{
+    background:transparent;color:var(--slate-dim);padding:10px 14px;text-align:left;
+    font-size:14px;font-weight:600;border-radius:8px;
+  }
+  .nav-item.active{background:var(--amber-tint);color:var(--amber-dim);}
   .tab-badge{
     display:inline-block;background:var(--rose);color:#fff;font-family:'Space Mono',monospace;
     font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:6px;vertical-align:middle;
@@ -189,6 +194,14 @@
     .board-row .type{flex:0 0 auto;}
     .board-row .dates{flex:0 0 auto;white-space:normal;}
     .board-row .back{flex:1 1 100%;white-space:normal;}
+
+    .app-layout{flex-direction:column;gap:0;}
+    .sidenav{
+      flex-direction:row;width:auto;position:static;overflow-x:auto;gap:6px;
+      border-bottom:1px solid var(--panel-edge);padding-bottom:10px;margin-bottom:16px;
+    }
+    .nav-item{flex-shrink:0;white-space:nowrap;}
+    .nav-item.active{background:transparent;color:var(--amber);border-bottom:2px solid var(--amber);border-radius:0;}
   }
 </style>
 </head>
@@ -229,12 +242,14 @@
     <div id="board-body"></div>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-view="mine">My Time Off</button>
-    <button class="tab" data-view="team">Team Calendar</button>
-    <button class="tab" data-view="approvals" id="approvals-tab" style="display:none;">Approvals<span id="approvals-badge" class="tab-badge" style="display:none;"></span></button>
-    <button class="tab" data-view="holidays">Holidays</button>
-  </div>
+  <div class="app-layout">
+    <nav class="sidenav">
+      <button class="nav-item active" data-view="mine">My Time Off</button>
+      <button class="nav-item" data-view="team">Team Calendar</button>
+      <button class="nav-item" data-view="approvals" id="approvals-tab" style="display:none;">Approvals<span id="approvals-badge" class="tab-badge" style="display:none;"></span></button>
+      <button class="nav-item" data-view="holidays">Holidays</button>
+    </nav>
+    <div class="main-views">
 
   <!-- ===== MY TIME OFF ===== -->
   <section class="view active" id="view-mine">
@@ -345,6 +360,9 @@
       <div id="holiday-msg"></div>
     </div>
   </section>
+
+    </div>
+  </div>
 </div>
 
 <script>
@@ -508,9 +526,9 @@ async function bootApp(){
 }
 
 /* ---------- tabs ---------- */
-document.querySelectorAll('.tab').forEach(tab => {
+document.querySelectorAll('.nav-item').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('view-' + tab.dataset.view).classList.add('active');
@@ -764,8 +782,10 @@ async function loadPending(){
         <div class="tdates">${fmtDate(r.start_date)} → ${fmtDate(r.end_date)}</div>
         <div class="tnote">${totalCalendarDays(r.start_date, r.end_date)} calendar days, weekends included</div>
         <div class="ticket-actions">
-          <button class="btn-approve" data-approve="${r.id}">Approve</button>
-          <button class="btn-deny" data-deny="${r.id}">Deny</button>
+          ${(currentProfile.role === 'manager' && r.employee_id === currentProfile.id)
+            ? `<span style="font-size:12px;color:var(--slate-dim);font-style:italic;">Self-requested — needs admin review</span>`
+            : `<button class="btn-approve" data-approve="${r.id}">Approve</button>
+               <button class="btn-deny" data-deny="${r.id}">Deny</button>`}
           ${currentProfile.role==='admin' ? `<button class="btn-cancel" data-delete="${r.id}">Delete</button>` : ''}
         </div>
       </div>
@@ -843,7 +863,7 @@ function enterEditMode(r){
   updateDaysPreview();
   document.getElementById('edit-banner').style.display = 'block';
   document.getElementById('req-submit').textContent = 'Save changes';
-  document.querySelector('.tab[data-view="mine"]').click();
+  document.querySelector('.nav-item[data-view="mine"]').click();
   document.getElementById('req-submit').scrollIntoView({ behavior:'smooth', block:'center' });
 }
 
