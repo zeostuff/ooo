@@ -115,6 +115,24 @@
     font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:6px;vertical-align:middle;
   }
   .mobile-account-block{display:none;}
+
+  /* ============ TEAM CALENDAR GRID ============ */
+  .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .cal-nav-btn{background:transparent;border:1px solid var(--panel-edge);border-radius:8px;padding:6px 12px;font-size:14px;color:var(--ink);}
+  .cal-nav-btn:hover{background:var(--panel-edge);}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;font-size:10px;color:var(--slate-dim);text-transform:uppercase;text-align:center;margin-bottom:4px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .cal-cell{background:var(--paper);border-radius:8px;min-height:66px;padding:6px;font-size:11px;color:var(--paper-ink);cursor:pointer;}
+  .cal-cell:hover{outline:1px solid var(--amber);}
+  .cal-cell.cal-empty{background:transparent;cursor:default;}
+  .cal-cell.cal-empty:hover{outline:none;}
+  .cal-cell.cal-holiday{background:var(--amber-tint);color:var(--amber-dim);}
+  .cal-daynum{font-family:'Space Mono',monospace;}
+  .cal-holiday-name{font-size:9px;margin-top:2px;line-height:1.2;}
+  .cal-chips{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;}
+  .cal-chip{background:var(--amber);color:#fff;border-radius:4px;font-size:9px;padding:1px 4px;font-family:'Space Mono',monospace;}
+  .cal-chip.cal-more{background:var(--slate-dim);}
+  #cal-day-detail{margin-top:14px;background:var(--panel);border:1px solid var(--panel-edge);border-radius:10px;padding:12px 14px;}
   .view{display:none;}
   .view.active{display:block;}
 
@@ -193,6 +211,10 @@
     .board-row .type{flex:0 0 auto;}
     .board-row .dates{flex:0 0 auto;white-space:normal;}
     .board-row .back{flex:1 1 100%;white-space:normal;}
+
+    .cal-cell{min-height:46px;font-size:10px;padding:4px;}
+    .cal-holiday-name{font-size:8px;}
+    .cal-chip{font-size:8px;padding:0 3px;}
 
     .who{display:none;}
     .hamburger-btn{display:inline-block;}
@@ -323,6 +345,18 @@
   <!-- ===== TEAM CALENDAR ===== -->
   <section class="view" id="view-team">
     <div class="panel-box">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" id="cal-prev" aria-label="Previous month">&larr;</button>
+        <div id="cal-month-label" style="font-family:'Space Mono',monospace;font-size:14px;color:var(--ink);"></div>
+        <button class="cal-nav-btn" id="cal-next" aria-label="Next month">&rarr;</button>
+      </div>
+      <div class="cal-weekdays">
+        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div id="cal-day-detail" style="display:none;"></div>
+    </div>
+    <div class="panel-box">
       <h2>Approved team time off</h2>
       <div class="tickets" id="team-list"></div>
     </div>
@@ -393,6 +427,8 @@ let sb = null;
 let currentProfile = null; // { id, full_name, email, role, official_allocation }
 let holidaySet = new Set(); // set of 'YYYY-MM-DD' strings for fast lookup
 let editingRequestId = null;
+let allApprovedRequests = [];
+let calendarViewDate = new Date();
 
 function configIsMissing(){
   return !SUPABASE_URL || !SUPABASE_ANON_KEY
@@ -568,12 +604,98 @@ async function refreshAll(){
     currentProfile.role === 'admin' ? loadTeamBalances() : Promise.resolve()
   ]);
   updateDaysPreview(); // re-check the open request form now that holidays are current
+  renderCalendarMonth(); // needs allApprovedRequests + allHolidays, both loaded above
 }
 
 async function loadHolidaySet(){
   const { data } = await sb.from('holidays').select('holiday_date');
   holidaySet = new Set((data || []).map(h => h.holiday_date));
 }
+
+function initials(name){
+  return (name || '').split(' ').filter(Boolean).map(p => p[0]).join('').slice(0,2).toUpperCase();
+}
+
+function renderCalendarMonth(){
+  const year = calendarViewDate.getFullYear();
+  const month = calendarViewDate.getMonth();
+  document.getElementById('cal-month-label').textContent =
+    calendarViewDate.toLocaleDateString('en-GB', { month:'long', year:'numeric' });
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = "";
+  document.getElementById('cal-day-detail').style.display = 'none';
+
+  const firstOfMonth = new Date(year, month, 1);
+  const startWeekday = (firstOfMonth.getDay() + 6) % 7; // Mon=0 ... Sun=6
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const emptyCell = () => {
+    const d = document.createElement('div');
+    d.className = 'cal-cell cal-empty';
+    return d;
+  };
+
+  for(let i = 0; i < startWeekday; i++) grid.appendChild(emptyCell());
+
+  for(let day = 1; day <= daysInMonth; day++){
+    const dateObj = new Date(year, month, day);
+    const iso = isoLocal(dateObj);
+    const holiday = allHolidays.find(h => h.holiday_date === iso);
+    const dayRequests = allApprovedRequests.filter(r => r.start_date <= iso && r.end_date >= iso);
+
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' + (holiday ? ' cal-holiday' : '');
+
+    const shown = dayRequests.slice(0, 3);
+    const extra = dayRequests.length - shown.length;
+    const chipsHtml = shown.map(r =>
+      `<span class="cal-chip" title="${r.profiles.full_name} — ${typeLabel(r.type)}">${initials(r.profiles.full_name)}</span>`
+    ).join('') + (extra > 0 ? `<span class="cal-chip cal-more">+${extra}</span>` : '');
+
+    cell.innerHTML = `
+      <div class="cal-daynum">${day}</div>
+      ${holiday ? `<div class="cal-holiday-name">${holiday.name}</div>` : ''}
+      <div class="cal-chips">${chipsHtml}</div>
+    `;
+    cell.addEventListener('click', () => showCalendarDayDetail(iso, dayRequests, holiday));
+    grid.appendChild(cell);
+  }
+
+  const totalCells = startWeekday + daysInMonth;
+  const trailing = (7 - (totalCells % 7)) % 7;
+  for(let i = 0; i < trailing; i++) grid.appendChild(emptyCell());
+}
+
+function showCalendarDayDetail(iso, dayRequests, holiday){
+  const panel = document.getElementById('cal-day-detail');
+  if(dayRequests.length === 0 && !holiday){
+    panel.style.display = 'none';
+    return;
+  }
+  let html = `<div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--ink);margin-bottom:8px;">${fmtDateWithWeekday(new Date(iso + "T00:00:00"))}</div>`;
+  if(holiday){
+    html += `<div style="font-size:13px;color:var(--amber-dim);margin-bottom:8px;">${holiday.name}</div>`;
+  }
+  if(dayRequests.length === 0){
+    html += `<div style="font-size:13px;color:var(--slate-dim);font-style:italic;">Nobody scheduled to be out.</div>`;
+  } else {
+    dayRequests.forEach(r => {
+      html += `<div style="font-size:13px;color:var(--ink);padding:4px 0;border-top:1px solid var(--panel-edge);">${r.profiles.full_name} <span style="color:var(--slate-dim);">— ${typeLabel(r.type)}</span></div>`;
+    });
+  }
+  panel.innerHTML = html;
+  panel.style.display = 'block';
+}
+
+document.getElementById('cal-prev').addEventListener('click', () => {
+  calendarViewDate.setMonth(calendarViewDate.getMonth() - 1);
+  renderCalendarMonth();
+});
+document.getElementById('cal-next').addEventListener('click', () => {
+  calendarViewDate.setMonth(calendarViewDate.getMonth() + 1);
+  renderCalendarMonth();
+});
 
 async function loadBoard(){
   const today = new Date().toISOString().slice(0,10);
@@ -672,6 +794,7 @@ async function loadTeamApproved(){
     .select('*, profiles:employee_id(full_name)')
     .eq('status','approved')
     .order('start_date', { ascending:false });
+  allApprovedRequests = data || [];
   const list = document.getElementById('team-list');
   list.innerHTML = "";
   if(!data || data.length === 0){
