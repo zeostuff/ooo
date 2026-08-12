@@ -137,6 +137,28 @@
   .cal-today-btn{background:var(--amber-tint);color:var(--amber-dim);border:1px solid var(--panel-edge);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;}
   .cal-today-btn:hover{background:var(--amber);color:#fff;}
   #cal-day-detail{margin-top:14px;background:var(--panel);border:1px solid var(--panel-edge);border-radius:10px;padding:12px 14px;}
+
+  /* ============ TEAM DIRECTORY ============ */
+  .directory-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;}
+  .dir-card{background:var(--panel);border:1px solid var(--panel-edge);border-radius:10px;padding:14px;}
+  .dir-card.dir-open{border-color:var(--amber);}
+  .dir-head{cursor:pointer;}
+  .dir-avatar{
+    width:38px;height:38px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:700;font-family:'Space Mono',monospace;margin-bottom:8px;
+  }
+  .dir-name{font-size:13px;font-weight:700;color:var(--ink);}
+  .dir-role{font-size:10px;color:var(--slate-dim);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+  .dir-detail{display:none;border-top:1px solid var(--panel-edge);margin-top:10px;padding-top:10px;}
+  .dir-card.dir-open .dir-detail{display:block;}
+  .dir-detail-line{font-size:12px;color:var(--slate);line-height:1.7;}
+  .dir-detail-line.dir-empty{color:var(--slate-dim);font-style:italic;}
+  .dir-edit-field{margin-bottom:10px;}
+  .dir-edit-field label{display:block;font-size:10px;color:var(--slate-dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+  .dir-edit-field input{width:100%;font-size:13px;}
+  .dir-msg{font-size:12px;margin-top:6px;min-height:1em;}
+  .dir-msg.ok{color:var(--green);}
+  .dir-msg.err{color:var(--rose);}
   .mobile-day-cal{display:none;}
   .mday-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
   .mday-label{text-align:center;}
@@ -305,6 +327,7 @@
       </div>
       <button class="tab active" data-view="mine">My Time Off</button>
       <button class="tab" data-view="team">Team Calendar</button>
+      <button class="tab" data-view="directory">Team</button>
       <button class="tab" data-view="approvals" id="approvals-tab" style="display:none;">Approvals<span id="approvals-badge" class="tab-badge" style="display:none;"></span></button>
       <button class="tab" data-view="holidays">Holidays</button>
     </div>
@@ -397,6 +420,14 @@
     <div class="panel-box">
       <h2>Approved team time off</h2>
       <div class="tickets" id="team-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== TEAM DIRECTORY ===== -->
+  <section class="view" id="view-directory">
+    <div class="panel-box">
+      <h2>Team</h2>
+      <div class="directory-grid" id="directory-grid"></div>
     </div>
   </section>
 
@@ -565,6 +596,11 @@ function setMsg(el, text, ok){
   el.textContent = text;
   el.className = ok ? "ok" : "err";
 }
+function setDirMsg(el, text, ok){
+  el.textContent = text;
+  el.classList.remove('ok', 'err');
+  el.classList.add(ok ? 'ok' : 'err');
+}
 
 /* ---------- auth ---------- */
 document.getElementById('login-btn').addEventListener('click', async () => {
@@ -657,6 +693,7 @@ async function refreshAll(){
     loadMyRequests(),
     loadTeamApproved(),
     loadHolidays(),
+    loadDirectory(),
     (currentProfile.role === 'admin' || currentProfile.role === 'manager') ? loadPending() : Promise.resolve(),
     currentProfile.role === 'admin' ? loadTeamBalances() : Promise.resolve()
   ]);
@@ -1133,6 +1170,129 @@ async function loadTeamBalances(){
     `;
     tbody.appendChild(row);
   });
+}
+
+async function loadDirectory(){
+  const { data } = await sb.from('profiles')
+    .select('id, full_name, role, email, personal_email, phone_number')
+    .order('display_order', { ascending:true, nullsFirst:false });
+  const grid = document.getElementById('directory-grid');
+  const openIds = new Set();
+  grid.querySelectorAll('.dir-card.dir-open').forEach(el => openIds.add(el.dataset.id));
+  grid.innerHTML = "";
+  (data || []).forEach(p => renderDirectoryCard(p, grid, openIds.has(p.id)));
+}
+
+function renderDirectoryCard(p, grid, wasOpen){
+  const isMe = p.id === currentProfile.id;
+  const color = personColor(p.id);
+  const card = document.createElement('div');
+  card.className = 'dir-card' + (wasOpen ? ' dir-open' : '');
+  card.dataset.id = p.id;
+
+  const detailHtml = isMe ? `
+    <div class="dir-edit-field">
+      <label for="dir-personal-email">Personal email</label>
+      <input id="dir-personal-email" type="email" value="${p.personal_email || ''}" placeholder="you@example.com">
+    </div>
+    <div class="dir-edit-field">
+      <label for="dir-phone">Phone number</label>
+      <input id="dir-phone" type="tel" value="${p.phone_number || ''}" placeholder="+389 ...">
+    </div>
+    <button class="btn-primary" id="dir-save-contact" style="width:auto;padding:9px 16px;font-size:13px;">Save</button>
+    <div class="dir-msg" id="dir-contact-msg"></div>
+
+    <div style="border-top:1px solid var(--panel-edge);margin-top:14px;padding-top:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:8px;">Change password</div>
+      <div class="dir-edit-field">
+        <label for="dir-pwd-current">Current password</label>
+        <input id="dir-pwd-current" type="password" autocomplete="current-password">
+      </div>
+      <div class="dir-edit-field">
+        <label for="dir-pwd-new">New password</label>
+        <input id="dir-pwd-new" type="password" autocomplete="new-password">
+      </div>
+      <div class="dir-edit-field">
+        <label for="dir-pwd-confirm">Confirm new password</label>
+        <input id="dir-pwd-confirm" type="password" autocomplete="new-password">
+      </div>
+      <button class="btn-primary" id="dir-save-password" style="width:auto;padding:9px 16px;font-size:13px;">Update password</button>
+      <div class="dir-msg" id="dir-password-msg"></div>
+    </div>
+  ` : `
+    <div class="dir-detail-line">${p.email}</div>
+    <div class="dir-detail-line${p.personal_email ? '' : ' dir-empty'}">${p.personal_email || 'No personal email added'}</div>
+    <div class="dir-detail-line${p.phone_number ? '' : ' dir-empty'}">${p.phone_number || 'No phone number added'}</div>
+  `;
+
+  card.innerHTML = `
+    <div class="dir-head">
+      <div class="dir-avatar" style="background:${color.solid};">${initialsFallback(p.full_name)}</div>
+      <div class="dir-name">${p.full_name}${isMe ? ' (you)' : ''}</div>
+      <div class="dir-role">${p.role}</div>
+    </div>
+    <div class="dir-detail">${detailHtml}</div>
+  `;
+
+  card.querySelector('.dir-head').addEventListener('click', () => {
+    card.classList.toggle('dir-open');
+  });
+
+  if(isMe){
+    card.querySelector('#dir-save-contact').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const msgEl = card.querySelector('#dir-contact-msg');
+      const personalEmail = card.querySelector('#dir-personal-email').value.trim();
+      const phone = card.querySelector('#dir-phone').value.trim();
+      const { error } = await sb.from('profiles').update({
+        personal_email: personalEmail || null,
+        phone_number: phone || null
+      }).eq('id', currentProfile.id);
+      if(error){ setDirMsg(msgEl, error.message, false); return; }
+      setDirMsg(msgEl, 'Saved.', true);
+    });
+
+    card.querySelector('#dir-save-password').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const msgEl = card.querySelector('#dir-password-msg');
+      const current = card.querySelector('#dir-pwd-current').value;
+      const next = card.querySelector('#dir-pwd-new').value;
+      const confirmPwd = card.querySelector('#dir-pwd-confirm').value;
+
+      if(!current || !next || !confirmPwd){
+        setDirMsg(msgEl, 'Fill in all three fields.', false);
+        return;
+      }
+      if(next.length < 6){
+        setDirMsg(msgEl, 'New password must be at least 6 characters.', false);
+        return;
+      }
+      if(next !== confirmPwd){
+        setDirMsg(msgEl, "New password and confirmation don't match.", false);
+        return;
+      }
+      const { error: verifyError } = await sb.auth.signInWithPassword({ email: currentProfile.email, password: current });
+      if(verifyError){
+        setDirMsg(msgEl, 'Current password is incorrect.', false);
+        return;
+      }
+      const { error: updateError } = await sb.auth.updateUser({ password: next });
+      if(updateError){
+        setDirMsg(msgEl, updateError.message, false);
+        return;
+      }
+      setDirMsg(msgEl, 'Password updated.', true);
+      card.querySelector('#dir-pwd-current').value = '';
+      card.querySelector('#dir-pwd-new').value = '';
+      card.querySelector('#dir-pwd-confirm').value = '';
+    });
+  }
+
+  grid.appendChild(card);
+}
+
+function initialsFallback(name){
+  return (name || '').split(' ').filter(Boolean).map(p => p[0]).join('').slice(0,2).toUpperCase();
 }
 
 async function reviewRequest(id, status){
