@@ -137,6 +137,14 @@
   .cal-today-btn{background:var(--amber-tint);color:var(--amber-dim);border:1px solid var(--panel-edge);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;}
   .cal-today-btn:hover{background:var(--amber);color:#fff;}
   #cal-day-detail{margin-top:14px;background:var(--panel);border:1px solid var(--panel-edge);border-radius:10px;padding:12px 14px;}
+  .mobile-day-cal{display:none;}
+  .mday-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .mday-label{text-align:center;}
+  .mday-label #mday-date{font-family:'Space Mono',monospace;font-size:14px;color:var(--ink);font-weight:700;}
+  .mday-today-tag{font-size:10px;color:var(--amber-dim);text-transform:uppercase;letter-spacing:.04em;}
+  .mday-holiday{background:var(--amber-tint);color:var(--amber-dim);border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:8px;}
+  .mday-row{display:flex;justify-content:space-between;align-items:center;border-radius:8px;padding:9px 12px;margin-bottom:6px;font-size:13px;font-weight:600;}
+  .mday-type{font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:.03em;}
   .view{display:none;}
   .view.active{display:block;}
 
@@ -227,15 +235,14 @@
     .board-row .dates{flex:0 0 auto;white-space:normal;}
     .board-row .back{flex:1 1 100%;white-space:normal;}
 
-    .cal-cell{min-height:46px;font-size:10px;padding:4px;}
-    .cal-holiday-name{font-size:8px;}
-    .cal-chip{font-size:8px;padding:0 3px;}
+    .desktop-cal{display:none;}
+    .mobile-day-cal{display:block;}
 
     .who{display:none;}
-    .hamburger-btn{display:inline-block;}
+    .hamburger-btn{display:inline-block;font-size:22px;padding:10px 13px;}
     .tabs-row{border-bottom:none;margin-bottom:0;}
     .tabs{
-      display:none;position:fixed;top:64px;right:20px;left:auto;width:220px;
+      display:none;position:fixed;top:70px;right:20px;left:auto;width:220px;
       flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--panel-edge);
       border-radius:10px;padding:10px;z-index:50;box-shadow:0 4px 16px rgba(0,0,0,.14);
     }
@@ -360,19 +367,32 @@
   <!-- ===== TEAM CALENDAR ===== -->
   <section class="view" id="view-team">
     <div class="panel-box">
-      <div class="cal-nav">
-        <button class="cal-nav-btn" id="cal-prev" aria-label="Previous month">&larr;</button>
-        <div id="cal-month-label" style="font-family:'Space Mono',monospace;font-size:14px;color:var(--ink);"></div>
-        <div style="display:flex;gap:6px;">
-          <button class="cal-today-btn" id="cal-today">Today</button>
-          <button class="cal-nav-btn" id="cal-next" aria-label="Next month">&rarr;</button>
+      <div class="desktop-cal">
+        <div class="cal-nav">
+          <button class="cal-nav-btn" id="cal-prev" aria-label="Previous month">&larr;</button>
+          <div id="cal-month-label" style="font-family:'Space Mono',monospace;font-size:14px;color:var(--ink);"></div>
+          <div style="display:flex;gap:6px;">
+            <button class="cal-today-btn" id="cal-today">Today</button>
+            <button class="cal-nav-btn" id="cal-next" aria-label="Next month">&rarr;</button>
+          </div>
         </div>
+        <div class="cal-weekdays">
+          <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div id="cal-day-detail" style="display:none;"></div>
       </div>
-      <div class="cal-weekdays">
-        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+      <div class="mobile-day-cal">
+        <div class="mday-nav">
+          <button class="cal-nav-btn" id="mday-prev" aria-label="Previous day">&larr;</button>
+          <div class="mday-label">
+            <div id="mday-date"></div>
+            <div id="mday-today-tag" class="mday-today-tag"></div>
+          </div>
+          <button class="cal-nav-btn" id="mday-next" aria-label="Next day">&rarr;</button>
+        </div>
+        <div id="mobile-day-list"></div>
       </div>
-      <div class="cal-grid" id="cal-grid"></div>
-      <div id="cal-day-detail" style="display:none;"></div>
     </div>
     <div class="panel-box">
       <h2>Approved team time off</h2>
@@ -447,6 +467,25 @@ let holidaySet = new Set(); // set of 'YYYY-MM-DD' strings for fast lookup
 let editingRequestId = null;
 let allApprovedRequests = [];
 let calendarViewDate = new Date();
+let mobileDayDate = new Date();
+
+const PERSON_COLORS = [
+  { solid:'#D97757', bg:'#F3DCCF', text:'#8A4A30' },
+  { solid:'#3F7A5A', bg:'#D7EDE1', text:'#276B4B' },
+  { solid:'#3B6EA5', bg:'#D7E4F0', text:'#234A73' },
+  { solid:'#8B4A6B', bg:'#EFD9E3', text:'#5C2F47' },
+  { solid:'#B8862E', bg:'#F2E1BE', text:'#6E4F16' },
+  { solid:'#2F7A6E', bg:'#D2E9E4', text:'#1D4A43' },
+  { solid:'#B14A40', bg:'#F6D9D6', text:'#A5352C' },
+  { solid:'#5F5E5A', bg:'#E7E6E1', text:'#444441' }
+];
+function personColor(employeeId){
+  let hash = 0;
+  for(let i = 0; i < employeeId.length; i++){
+    hash = (hash * 31 + employeeId.charCodeAt(i)) % PERSON_COLORS.length;
+  }
+  return PERSON_COLORS[Math.abs(hash) % PERSON_COLORS.length];
+}
 
 function configIsMissing(){
   return !SUPABASE_URL || !SUPABASE_ANON_KEY
@@ -623,6 +662,7 @@ async function refreshAll(){
   ]);
   updateDaysPreview(); // re-check the open request form now that holidays are current
   renderCalendarMonth(); // needs allApprovedRequests + allHolidays, both loaded above
+  renderMobileDay();
 }
 
 async function loadHolidaySet(){
@@ -670,9 +710,10 @@ function renderCalendarMonth(){
 
     const shown = dayRequests.slice(0, 3);
     const extra = dayRequests.length - shown.length;
-    const chipsHtml = shown.map(r =>
-      `<span class="cal-chip" title="${r.profiles.full_name} — ${typeLabel(r.type)}">${chipName(r.profiles.full_name)}</span>`
-    ).join('') + (extra > 0 ? `<span class="cal-chip cal-more">+${extra}</span>` : '');
+    const chipsHtml = shown.map(r => {
+      const c = personColor(r.employee_id);
+      return `<span class="cal-chip" style="background:${c.solid};" title="${r.profiles.full_name} — ${typeLabel(r.type)}">${chipName(r.profiles.full_name)}</span>`;
+    }).join('') + (extra > 0 ? `<span class="cal-chip cal-more">+${extra}</span>` : '');
 
     cell.innerHTML = `
       <div class="cal-daynum">${day}</div>
@@ -721,6 +762,44 @@ document.getElementById('cal-next').addEventListener('click', () => {
 document.getElementById('cal-today').addEventListener('click', () => {
   calendarViewDate = new Date();
   renderCalendarMonth();
+});
+function renderMobileDay(){
+  const iso = isoLocal(mobileDayDate);
+  document.getElementById('mday-date').textContent = fmtDateWithWeekday(mobileDayDate);
+  document.getElementById('mday-today-tag').textContent = (iso === isoLocal(new Date())) ? 'Today' : '';
+
+  const holiday = allHolidays.find(h => h.holiday_date === iso);
+  const dayRequests = allApprovedRequests.filter(r => r.start_date <= iso && r.end_date >= iso);
+  const list = document.getElementById('mobile-day-list');
+  list.innerHTML = "";
+
+  if(holiday){
+    const h = document.createElement('div');
+    h.className = 'mday-holiday';
+    h.textContent = holiday.name;
+    list.appendChild(h);
+  }
+  if(dayRequests.length === 0 && !holiday){
+    list.innerHTML += '<div class="empty-state" style="padding:10px 0;">Nobody scheduled to be out.</div>';
+    return;
+  }
+  dayRequests.forEach(r => {
+    const c = personColor(r.employee_id);
+    const row = document.createElement('div');
+    row.className = 'mday-row';
+    row.style.background = c.bg;
+    row.style.color = c.text;
+    row.innerHTML = `<span>${r.profiles.full_name}</span><span class="mday-type">${typeLabel(r.type)}</span>`;
+    list.appendChild(row);
+  });
+}
+document.getElementById('mday-prev').addEventListener('click', () => {
+  mobileDayDate.setDate(mobileDayDate.getDate() - 1);
+  renderMobileDay();
+});
+document.getElementById('mday-next').addEventListener('click', () => {
+  mobileDayDate.setDate(mobileDayDate.getDate() + 1);
+  renderMobileDay();
 });
 
 async function loadBoard(){
