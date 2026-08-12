@@ -114,6 +114,7 @@
     display:inline-block;background:var(--rose);color:#fff;font-family:'Space Mono',monospace;
     font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:6px;vertical-align:middle;
   }
+  .mobile-account-block{display:none;}
   .view{display:none;}
   .view.active{display:block;}
 
@@ -193,16 +194,22 @@
     .board-row .dates{flex:0 0 auto;white-space:normal;}
     .board-row .back{flex:1 1 100%;white-space:normal;}
 
+    .who{display:none;}
     .hamburger-btn{display:inline-block;}
-    .tabs-row{border-bottom:none;}
+    .tabs-row{border-bottom:none;margin-bottom:0;}
     .tabs{
-      display:none;position:absolute;left:20px;right:20px;top:auto;margin-top:8px;
+      display:none;position:fixed;top:64px;right:20px;left:auto;width:220px;
       flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--panel-edge);
-      border-radius:10px;padding:8px;z-index:10;
+      border-radius:10px;padding:10px;z-index:50;box-shadow:0 4px 16px rgba(0,0,0,.14);
     }
     .tabs.expanded{display:flex;}
     .tab{margin-right:0;padding:10px 12px;border-bottom:none;border-radius:8px;}
     .tab.active{background:var(--amber-tint);color:var(--amber-dim);border-bottom:none;}
+    .mobile-account-block{
+      display:block;border-bottom:1px solid var(--panel-edge);padding-bottom:10px;margin-bottom:8px;
+    }
+    .mobile-account-block strong{display:block;color:var(--ink);font-size:14px;}
+    .mobile-account-block #who-email-mobile{margin-bottom:6px;}
   }
 </style>
 </head>
@@ -230,12 +237,13 @@
 <div id="app">
   <header class="top">
     <div class="brand" style="margin-top:8px;">Invoker · Time Off</div>
-    <div class="who">
+    <div class="who" id="who-block">
       <strong id="who-name">—</strong>
       <span id="who-email"></span>
       <div><span class="role-badge" id="who-role">EMPLOYEE</span></div>
       <button class="btn-ghost" id="signout-btn" style="margin-top:10px;">Sign out</button>
     </div>
+    <button class="hamburger-btn" id="hamburger-btn" aria-label="Menu">&#9776;</button>
   </header>
 
   <div class="board">
@@ -244,8 +252,13 @@
   </div>
 
   <div class="tabs-row">
-    <button class="hamburger-btn" id="hamburger-btn" aria-label="Menu">&#9776;</button>
     <div class="tabs" id="tabs-list">
+      <div class="mobile-account-block">
+        <strong id="who-name-mobile">—</strong>
+        <div id="who-email-mobile" style="font-size:12px;color:var(--slate-dim);"></div>
+        <span class="role-badge" id="who-role-mobile">EMPLOYEE</span>
+        <button class="btn-ghost" id="signout-btn-mobile" style="margin-top:8px;width:100%;">Sign out</button>
+      </div>
       <button class="tab active" data-view="mine">My Time Off</button>
       <button class="tab" data-view="team">Team Calendar</button>
       <button class="tab" data-view="approvals" id="approvals-tab" style="display:none;">Approvals<span id="approvals-badge" class="tab-badge" style="display:none;"></span></button>
@@ -482,10 +495,12 @@ document.getElementById('login-btn').addEventListener('click', async () => {
   await bootApp();
 });
 
-document.getElementById('signout-btn').addEventListener('click', async () => {
+async function signOut(){
   await sb.auth.signOut();
   location.reload();
-});
+}
+document.getElementById('signout-btn').addEventListener('click', signOut);
+document.getElementById('signout-btn-mobile').addEventListener('click', signOut);
 
 async function bootApp(){
   if(!sb) return; // not configured yet — error already shown
@@ -514,6 +529,9 @@ async function bootApp(){
   document.getElementById('who-name').textContent = profile.full_name;
   document.getElementById('who-email').textContent = profile.email;
   document.getElementById('who-role').textContent = profile.role.toUpperCase();
+  document.getElementById('who-name-mobile').textContent = profile.full_name;
+  document.getElementById('who-email-mobile').textContent = profile.email;
+  document.getElementById('who-role-mobile').textContent = profile.role.toUpperCase();
   if(profile.role === 'admin' || profile.role === 'manager'){
     document.getElementById('approvals-tab').style.display = 'inline-block';
   }
@@ -820,7 +838,7 @@ async function loadPending(){
 
 async function loadTeamBalances(){
   const currentYear = new Date().getFullYear();
-  const { data: profiles } = await sb.from('profiles').select('id, full_name, official_allocation').order('full_name', { ascending:true });
+  const { data: profiles } = await sb.from('profiles').select('id, full_name, official_allocation').order('display_order', { ascending:true, nullsFirst:false });
   const { data: approved } = await sb.from('requests').select('employee_id, days_count, start_date, type').eq('status','approved').in('type', PAID_TYPES);
 
   const usedMap = {};
