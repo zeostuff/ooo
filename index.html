@@ -243,6 +243,12 @@
   .balances-table td.num{font-family:'Space Mono',monospace;}
   .balances-table tr:last-child td{border-bottom:none;}
 
+  /* ============ ACTIVITY LOG ============ */
+  .activity-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--panel-edge);font-size:13px;}
+  .activity-row:last-child{border-bottom:none;}
+  .activity-text{color:var(--ink);}
+  .activity-time{color:var(--slate-dim);font-family:'Space Mono',monospace;font-size:11px;white-space:nowrap;}
+
   @media (max-width:560px){
     .form-grid{grid-template-columns:1fr;}
     .form-grid .field-inline{min-width:0;}
@@ -331,7 +337,7 @@
       <button class="tab" data-view="directory">Team</button>
       <button class="tab" data-view="approvals" id="approvals-tab" style="display:none;">Approvals<span id="approvals-badge" class="tab-badge" style="display:none;"></span></button>
       <button class="tab" data-view="holidays">Holidays</button>
-      <button class="tab" data-view="log" id="log-tab" style="display:none;">Log</button>
+      <button class="tab" data-view="log" id="log-tab" style="display:none;">Activity Log</button>
     </div>
   </div>
 
@@ -481,20 +487,11 @@
     </div>
   </section>
 
-  <!-- ===== LOG (admin only) ===== -->
+  <!-- ===== ACTIVITY LOG (admin only) ===== -->
   <section class="view" id="view-log">
     <div class="panel-box">
-      <h2>Last login per person</h2>
-      <table class="balances-table">
-        <thead>
-          <tr>
-            <th>Employee</th>
-            <th>Role</th>
-            <th>Last login</th>
-          </tr>
-        </thead>
-        <tbody id="login-log-body"></tbody>
-      </table>
+      <h2>Activity Log</h2>
+      <div id="activity-log-list"></div>
     </div>
   </section>
 </div>
@@ -635,10 +632,17 @@ document.getElementById('login-btn').addEventListener('click', async () => {
     errEl.textContent = "Enter your email and password.";
     return;
   }
-  const { error } = await sb.auth.signInWithPassword({ email, password });
+  const { data: signInData, error } = await sb.auth.signInWithPassword({ email, password });
   if(error){
     errEl.textContent = error.message;
     return;
+  }
+  if(signInData && signInData.user){
+    await sb.from('audit_log').insert({
+      actor_id: signInData.user.id,
+      action: 'login',
+      target_employee_id: signInData.user.id
+    });
   }
   await bootApp();
 });
@@ -718,7 +722,7 @@ async function refreshAll(){
     loadDirectory(),
     (currentProfile.role === 'admin' || currentProfile.role === 'manager') ? loadPending() : Promise.resolve(),
     currentProfile.role === 'admin' ? loadTeamBalances() : Promise.resolve(),
-    currentProfile.role === 'admin' ? loadLoginLog() : Promise.resolve()
+    currentProfile.role === 'admin' ? loadActivityLog() : Promise.resolve()
   ]);
   updateDaysPreview(); // re-check the open request form now that holidays are current
   renderCalendarMonth(); // needs allApprovedRequests + allHolidays, both loaded above
@@ -1195,25 +1199,47 @@ async function loadTeamBalances(){
   });
 }
 
-async function loadLoginLog(){
-  const { data, error } = await sb.rpc('get_login_log');
-  const tbody = document.getElementById('login-log-body');
-  tbody.innerHTML = "";
-  if(error || !data){
-    tbody.innerHTML = '<tr><td colspan="3" style="color:var(--slate-dim);font-style:italic;">Could not load login log.</td></tr>';
+function formatActivityLine(row){
+  const d = row.details || {};
+  const range = (d.start_date && d.end_date) ? `${fmtDate(d.start_date)} → ${fmtDate(d.end_date)}` : '';
+  const type = d.type ? typeLabel(d.type) : 'request';
+  switch(row.action){
+    case 'login':
+      return `${row.actor_name} logged in`;
+    case 'request_submitted':
+      return `${row.actor_name} requested ${type} (${range})`;
+    case 'request_edited':
+      return `${row.actor_name} edited their ${type} request (${range})`;
+    case 'request_approved':
+      return `${row.actor_name} approved ${row.target_name}'s ${type} request (${range})`;
+    case 'request_denied':
+      return `${row.actor_name} denied ${row.target_name}'s ${type} request (${range})`;
+    case 'request_cancelled':
+      return `${row.actor_name} cancelled their ${type} request (${range})`;
+    case 'request_deleted':
+      return `${row.actor_name} deleted ${row.target_name}'s ${type} request (${range})`;
+    default:
+      return `${row.actor_name} — ${row.action}`;
+  }
+}
+
+async function loadActivityLog(){
+  const { data, error } = await sb.rpc('get_activity_log');
+  const list = document.getElementById('activity-log-list');
+  list.innerHTML = "";
+  if(error || !data || data.length === 0){
+    list.innerHTML = '<div class="empty-state">No activity recorded yet.</div>';
     return;
   }
-  data.forEach(p => {
-    const lastLogin = p.last_sign_in_at
-      ? new Date(p.last_sign_in_at).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
-      : 'Never logged in';
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${p.full_name}</td>
-      <td>${p.role}</td>
-      <td class="num">${lastLogin}</td>
+  data.forEach(row => {
+    const el = document.createElement('div');
+    el.className = 'activity-row';
+    const when = new Date(row.created_at).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    el.innerHTML = `
+      <span class="activity-text">${formatActivityLine(row)}</span>
+      <span class="activity-time">${when}</span>
     `;
-    tbody.appendChild(row);
+    list.appendChild(el);
   });
 }
 
