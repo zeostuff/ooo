@@ -78,6 +78,9 @@
     display:inline-block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.05em;
     padding:2px 7px;border-radius:4px;background:var(--amber-tint);color:var(--amber-dim);margin-top:4px;text-transform:uppercase;
   }
+  .btn-ghost-sm{padding:4px 10px;font-size:11px;}
+  .who-meta{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:4px;}
+  .who-meta .role-badge{margin-top:0;}
 
   /* ============ DEPARTURES TICKER ============ */
   .board{
@@ -340,9 +343,11 @@
     </div>
     <div class="who" id="who-block">
       <strong id="who-name">—</strong>
-      <span id="who-email"></span>
-      <div><span class="role-badge" id="who-role">EMPLOYEE</span></div>
-      <button class="btn-ghost" id="signout-btn" style="margin-top:10px;">Sign out</button>
+      <span id="who-email" style="display:none;"></span>
+      <div class="who-meta">
+        <span class="role-badge" id="who-role">EMPLOYEE</span>
+        <button class="btn-ghost btn-ghost-sm" id="signout-btn">Sign out</button>
+      </div>
     </div>
     <button class="hamburger-btn" id="hamburger-btn" aria-label="Menu">&#9776;</button>
   </header>
