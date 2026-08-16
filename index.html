@@ -331,6 +331,7 @@
       <button class="tab" data-view="directory">Team</button>
       <button class="tab" data-view="approvals" id="approvals-tab" style="display:none;">Approvals<span id="approvals-badge" class="tab-badge" style="display:none;"></span></button>
       <button class="tab" data-view="holidays">Holidays</button>
+      <button class="tab" data-view="log" id="log-tab" style="display:none;">Log</button>
     </div>
   </div>
 
@@ -477,6 +478,23 @@
       </div>
       <button class="btn-primary" id="hol-submit" style="width:auto;margin-top:14px;padding:11px 22px;">Add holiday</button>
       <div id="holiday-msg"></div>
+    </div>
+  </section>
+
+  <!-- ===== LOG (admin only) ===== -->
+  <section class="view" id="view-log">
+    <div class="panel-box">
+      <h2>Last login per person</h2>
+      <table class="balances-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Role</th>
+            <th>Last login</th>
+          </tr>
+        </thead>
+        <tbody id="login-log-body"></tbody>
+      </table>
     </div>
   </section>
 </div>
@@ -665,6 +683,9 @@ async function bootApp(){
   if(profile.role === 'admin' || profile.role === 'manager'){
     document.getElementById('approvals-tab').style.display = 'inline-block';
   }
+  if(profile.role === 'admin'){
+    document.getElementById('log-tab').style.display = 'inline-block';
+  }
   if(profile.role !== 'admin'){
     document.getElementById('holiday-manage-box').style.display = 'none';
     document.getElementById('team-balances-box').style.display = 'none';
@@ -696,7 +717,8 @@ async function refreshAll(){
     loadHolidays(),
     loadDirectory(),
     (currentProfile.role === 'admin' || currentProfile.role === 'manager') ? loadPending() : Promise.resolve(),
-    currentProfile.role === 'admin' ? loadTeamBalances() : Promise.resolve()
+    currentProfile.role === 'admin' ? loadTeamBalances() : Promise.resolve(),
+    currentProfile.role === 'admin' ? loadLoginLog() : Promise.resolve()
   ]);
   updateDaysPreview(); // re-check the open request form now that holidays are current
   renderCalendarMonth(); // needs allApprovedRequests + allHolidays, both loaded above
@@ -1168,6 +1190,28 @@ async function loadTeamBalances(){
       <td class="num">${p.official_allocation}</td>
       <td class="num">${used}</td>
       <td class="num">${remaining}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+async function loadLoginLog(){
+  const { data, error } = await sb.rpc('get_login_log');
+  const tbody = document.getElementById('login-log-body');
+  tbody.innerHTML = "";
+  if(error || !data){
+    tbody.innerHTML = '<tr><td colspan="3" style="color:var(--slate-dim);font-style:italic;">Could not load login log.</td></tr>';
+    return;
+  }
+  data.forEach(p => {
+    const lastLogin = p.last_sign_in_at
+      ? new Date(p.last_sign_in_at).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+      : 'Never logged in';
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${p.full_name}</td>
+      <td>${p.role}</td>
+      <td class="num">${lastLogin}</td>
     `;
     tbody.appendChild(row);
   });
