@@ -251,6 +251,19 @@
   .activity-text{color:var(--ink);}
   .activity-time{color:var(--slate-dim);font-family:'Space Mono',monospace;font-size:11px;white-space:nowrap;}
 
+  /* ============ UPDATE AVAILABLE BANNER ============ */
+  #update-banner{
+    display:none;position:fixed;bottom:20px;right:20px;background:var(--panel);
+    border:1px solid var(--panel-edge);border-radius:10px;padding:12px 14px;
+    box-shadow:0 4px 14px rgba(0,0,0,.14);align-items:center;gap:12px;max-width:320px;z-index:200;
+  }
+  #update-banner.show{display:flex;}
+  .update-dot{width:8px;height:8px;background:var(--amber);border-radius:50%;flex-shrink:0;}
+  .update-text{font-size:13px;color:var(--ink);flex:1;}
+  .update-refresh-btn{width:auto;padding:6px 12px;font-size:12px;white-space:nowrap;}
+  .update-dismiss{color:var(--slate-dim);font-size:18px;cursor:pointer;line-height:1;}
+  .update-dismiss:hover{color:var(--ink);}
+
   @media (max-width:560px){
     .form-grid{grid-template-columns:1fr;}
     .form-grid .field-inline{min-width:0;}
@@ -288,6 +301,7 @@
     }
     .mobile-account-block strong{display:block;color:var(--ink);font-size:14px;}
     .mobile-account-block #who-email-mobile{margin-bottom:6px;}
+    #update-banner{left:16px;right:16px;bottom:16px;max-width:none;}
   }
 
   /* ============ DESKTOP: combined fixed header + tabs ============ */
@@ -513,6 +527,13 @@
   </section>
 </div>
 
+<div id="update-banner">
+  <span class="update-dot"></span>
+  <span class="update-text">A new version is available.</span>
+  <button class="btn-primary update-refresh-btn" id="update-refresh-btn">Refresh</button>
+  <span class="update-dismiss" id="update-dismiss">&times;</span>
+</div>
+
 <script>
 /* ============================================================
    CONFIG — fill these in with your own Supabase project values
@@ -524,6 +545,9 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 /* Update this one line each year (same time you add the new year's holidays):
    it's shown next to "Allocated" so everyone sees the usable window, not just the number. */
 const ALLOCATION_PERIOD_LABEL = "Jul 1, 2026 – Jun 30, 2027";
+
+/* Bumped on every deploy — how the "update available" banner detects a new version. */
+const APP_VERSION = "2026-08-16-01";
 
 let sb = null;
 let currentProfile = null; // { id, full_name, email, role, official_allocation }
@@ -1488,6 +1512,35 @@ document.getElementById('hol-submit').addEventListener('click', async () => {
 });
 
 document.getElementById('holiday-year-filter').addEventListener('change', renderHolidayList);
+
+/* ---------- update-available check ---------- */
+async function checkForUpdate(){
+  try{
+    const res = await fetch(window.location.pathname + '?_=' + Date.now(), { cache:'no-store' });
+    const text = await res.text();
+    const match = text.match(/const APP_VERSION = "([^"]+)"/);
+    if(match && match[1] && match[1] !== APP_VERSION){
+      const dismissed = localStorage.getItem('dismissedUpdateVersion');
+      if(dismissed !== match[1]){
+        const banner = document.getElementById('update-banner');
+        banner.dataset.version = match[1];
+        banner.classList.add('show');
+      }
+    }
+  } catch(e){
+    // Silent failure — this is a non-critical convenience feature.
+  }
+}
+document.getElementById('update-refresh-btn').addEventListener('click', () => location.reload());
+document.getElementById('update-dismiss').addEventListener('click', () => {
+  const banner = document.getElementById('update-banner');
+  localStorage.setItem('dismissedUpdateVersion', banner.dataset.version || '');
+  banner.classList.remove('show');
+});
+setInterval(checkForUpdate, 30 * 60 * 1000); // every 30 minutes
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden) checkForUpdate();
+});
 
 /* ---------- boot ---------- */
 bootApp();
