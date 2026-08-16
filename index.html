@@ -101,7 +101,6 @@
   .board-empty{padding:16px;color:var(--slate-dim);font-size:13px;font-style:italic;}
 
   /* ============ TABS ============ */
-  .tabs-row{display:flex;align-items:center;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--panel-edge);position:relative;}
   .hamburger-btn{display:none;background:transparent;color:var(--ink);font-size:20px;line-height:1;padding:8px 10px;border-radius:8px;}
   .hamburger-btn:hover{background:var(--panel-edge);}
   .tabs{display:flex;gap:6px;flex:1;}
@@ -273,7 +272,6 @@
       position:fixed;top:18px;right:20px;z-index:60;
       background:var(--panel);box-shadow:0 2px 8px rgba(0,0,0,.12);
     }
-    .tabs-row{border-bottom:none;margin-bottom:0;}
     .tabs{
       display:none;position:fixed;top:70px;right:20px;left:auto;width:220px;
       flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--panel-edge);
@@ -287,6 +285,18 @@
     }
     .mobile-account-block strong{display:block;color:var(--ink);font-size:14px;}
     .mobile-account-block #who-email-mobile{margin-bottom:6px;}
+  }
+
+  /* ============ DESKTOP: combined fixed header + tabs ============ */
+  @media (min-width:561px){
+    header.top{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      max-width:1240px;margin:0 auto;padding:16px 20px;
+      background:var(--page-bg);align-items:center;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .tabs{flex:1;justify-content:center;}
+    #app{padding-top:96px;}
   }
 </style>
 </head>
@@ -314,21 +324,6 @@
 <div id="app">
   <header class="top">
     <div class="brand" style="margin-top:8px;">Invoker · Time Off</div>
-    <div class="who" id="who-block">
-      <strong id="who-name">—</strong>
-      <span id="who-email"></span>
-      <div><span class="role-badge" id="who-role">EMPLOYEE</span></div>
-      <button class="btn-ghost" id="signout-btn" style="margin-top:10px;">Sign out</button>
-    </div>
-    <button class="hamburger-btn" id="hamburger-btn" aria-label="Menu">&#9776;</button>
-  </header>
-
-  <div class="board">
-    <div class="board-head">Upcoming &amp; Ongoing</div>
-    <div id="board-body"></div>
-  </div>
-
-  <div class="tabs-row">
     <div class="tabs" id="tabs-list">
       <div class="mobile-account-block">
         <strong id="who-name-mobile">—</strong>
@@ -343,6 +338,18 @@
       <button class="tab" data-view="holidays">Holidays</button>
       <button class="tab" data-view="log" id="log-tab" style="display:none;">Activity Log</button>
     </div>
+    <div class="who" id="who-block">
+      <strong id="who-name">—</strong>
+      <span id="who-email"></span>
+      <div><span class="role-badge" id="who-role">EMPLOYEE</span></div>
+      <button class="btn-ghost" id="signout-btn" style="margin-top:10px;">Sign out</button>
+    </div>
+    <button class="hamburger-btn" id="hamburger-btn" aria-label="Menu">&#9776;</button>
+  </header>
+
+  <div class="board">
+    <div class="board-head">Upcoming &amp; Ongoing</div>
+    <div id="board-body"></div>
   </div>
 
   <!-- ===== MY TIME OFF ===== -->
