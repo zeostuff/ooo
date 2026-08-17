@@ -564,7 +564,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const ALLOCATION_PERIOD_LABEL = "Jul 1, 2026 – Jun 30, 2027";
 
 /* Bumped on every deploy — how the "update available" banner detects a new version. */
-const APP_VERSION = "2026-08-16-04";
+const APP_VERSION = "2026-08-16-05";
 
 let sb = null;
 let currentProfile = null; // { id, full_name, email, role, official_allocation }
@@ -676,6 +676,8 @@ function buildICS(r){
     `DTSTART;VALUE=DATE:${dtStart}`,
     `DTEND;VALUE=DATE:${dtEnd}`,
     `SUMMARY:${summary}`,
+    'TRANSP:OPAQUE',
+    'X-MICROSOFT-CDO-BUSYSTATUS:OOF',
   ];
   if(description) lines.push(`DESCRIPTION:${description}`);
   lines.push('END:VEVENT', 'END:VCALENDAR');
