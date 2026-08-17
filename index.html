@@ -564,7 +564,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const ALLOCATION_PERIOD_LABEL = "Jul 1, 2026 – Jun 30, 2027";
 
 /* Bumped on every deploy — how the "update available" banner detects a new version. */
-const APP_VERSION = "2026-08-16-03";
+const APP_VERSION = "2026-08-16-04";
 
 let sb = null;
 let currentProfile = null; // { id, full_name, email, role, official_allocation }
@@ -661,7 +661,8 @@ function buildICS(r){
   const endExclusive = addDays(r.end_date, 1);
   const dtEnd = isoLocal(endExclusive).replace(/-/g, '');
   const dtStamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  const summary = `${typeLabel(r.type)} — Invoker Time Off`;
+  const firstName = (r.profiles && r.profiles.full_name ? r.profiles.full_name : currentProfile.full_name).split(' ')[0];
+  const summary = `${firstName} OOO - ${typeLabel(r.type)}`;
   const description = r.note ? r.note.replace(/\r?\n/g, '\\n') : '';
 
   const lines = [
