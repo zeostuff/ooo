@@ -564,7 +564,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const ALLOCATION_PERIOD_LABEL = "Jul 1, 2026 – Jun 30, 2027";
 
 /* Bumped on every deploy — how the "update available" banner detects a new version. */
-const APP_VERSION = "2026-08-16-02";
+const APP_VERSION = "2026-08-16-03";
 
 let sb = null;
 let currentProfile = null; // { id, full_name, email, role, official_allocation }
@@ -650,6 +650,48 @@ function totalCalendarDays(startStr, endStr){
 }
 function isoLocal(d){
   return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0');
+}
+
+/* ---------- .ics calendar file (Add to Calendar) ---------- */
+function buildICS(r){
+  const uid = r.id + '@invoker-timeoff';
+  const dtStart = r.start_date.replace(/-/g, '');
+  // ICS all-day events use an EXCLUSIVE end date, so it needs to be one day
+  // past the actual last day, or the last day itself won't show as included.
+  const endExclusive = addDays(r.end_date, 1);
+  const dtEnd = isoLocal(endExclusive).replace(/-/g, '');
+  const dtStamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const summary = `${typeLabel(r.type)} — Invoker Time Off`;
+  const description = r.note ? r.note.replace(/\r?\n/g, '\\n') : '';
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Invoker Time Off//EN',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${dtStamp}`,
+    `DTSTART;VALUE=DATE:${dtStart}`,
+    `DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${summary}`,
+  ];
+  if(description) lines.push(`DESCRIPTION:${description}`);
+  lines.push('END:VEVENT', 'END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+function downloadICS(r){
+  const ics = buildICS(r);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `timeoff-${r.start_date}-${r.type}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 function businessDays(startStr, endStr){
   if(!startStr || !endStr) return 0;
@@ -986,6 +1028,7 @@ async function loadMyRequests(){
         <div class="ticket-actions">
           <button class="btn-cancel" data-edit="${r.id}">Edit</button>
           ${r.status==='pending' ? `<button class="btn-cancel" data-cancel="${r.id}">Cancel request</button>` : ''}
+          ${r.status!=='denied' ? `<button class="btn-cancel" data-ics="${r.id}">Add to Calendar</button>` : ''}
           ${currentProfile.role==='admin' ? `<button class="btn-deny" data-delete="${r.id}">Delete</button>` : ''}
         </div>
       </div>
@@ -1001,6 +1044,8 @@ async function loadMyRequests(){
     list.appendChild(card);
     const editBtn = card.querySelector('[data-edit]');
     if(editBtn) editBtn.addEventListener('click', () => enterEditMode(r));
+    const icsBtn = card.querySelector('[data-ics]');
+    if(icsBtn) icsBtn.addEventListener('click', () => downloadICS(r));
     const delBtn = card.querySelector('[data-delete]');
     if(delBtn) delBtn.addEventListener('click', async () => {
       if(!confirm('Delete this request permanently? This cannot be undone.')) return;
